@@ -1,0 +1,126 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">Einstellungen</h1>
+    <button mat-raised-button color="primary" (click)="save()" [disabled]="saving()">
+      <mat-icon>save</mat-icon>
+      Speichern
+    </button>
+  </div>
+
+  <mat-tab-group>
+
+    <!-- Tab 1: Verbindungen & Credentials -->
+    <mat-tab label="Verbindungen">
+      <div class="tab-content">
+        @for (section of sections; track section.title) {
+          <mat-card class="settings-card">
+            <mat-card-header>
+              <mat-card-title>{{ section.title }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              @for (field of section.fields; track field.key) {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>{{ field.label }}</mat-label>
+                  @if (field.type === 'select') {
+                    <mat-select [value]="getValue(field.key)"
+                      (selectionChange)="setValue(field.key, $event.value)">
+                      @for (opt of field.options ?? []; track opt.value) {
+                        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                      }
+                    </mat-select>
+                  } @else {
+                    <input matInput [type]="field.type ?? 'text'"
+                      [value]="getValue(field.key)"
+                      (input)="setValue(field.key, $any($event.target).value)" />
+                  }
+                  @if (field.hint) { <mat-hint>{{ field.hint }}</mat-hint> }
+                </mat-form-field>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- KI-Anlegen-Berechtigungen -->
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>KI-Anlegen-Berechtigungen</mat-card-title>
+            <mat-card-subtitle>
+              Steuere welche Entitäten die KI neu in Paperless anlegen darf, wenn kein passender Eintrag vorhanden ist.
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @for (field of toggleFields; track field.key) {
+              <div class="toggle-row">
+                <div class="toggle-label">
+                  <span>{{ field.label }}</span>
+                  @if (field.hint) { <small>{{ field.hint }}</small> }
+                </div>
+                <mat-slide-toggle
+                  [checked]="isTrue(field.key)"
+                  (change)="setToggle(field.key, $event.checked)">
+                </mat-slide-toggle>
+              </div>
+              <mat-divider></mat-divider>
+            }
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </mat-tab>
+
+    <!-- Tab 2: KI-Prompts -->
+    <mat-tab label="KI-Prompts">
+      <div class="tab-content">
+
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>System-Prompt</mat-card-title>
+            <mat-card-subtitle>
+              Instruktionen für die KI — definiert die Rolle und das grundlegende Verhalten.
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>System-Prompt</mat-label>
+              <textarea matInput rows="8"
+                [value]="getValue(systemPromptKey)"
+                (input)="setValue(systemPromptKey, $any($event.target).value)">
+              </textarea>
+            </mat-form-field>
+            <button mat-stroked-button (click)="resetPrompt(systemPromptKey)"
+              matTooltip="Standard-Prompt wiederherstellen">
+              <mat-icon>restart_alt</mat-icon>
+              Auf Standard zurücksetzen
+            </button>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>User-Prompt-Vorlage</mat-card-title>
+            <mat-card-subtitle>
+              Vorlage für den Dokumenten-Prompt. Platzhalter:
+              <code>{{ '{DOCUMENT_CONTENT}' }}</code> und <code>{{ '{METADATA_CONTEXT}' }}</code>
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>User-Prompt-Vorlage</mat-label>
+              <textarea matInput rows="16"
+                [value]="getValue(userPromptKey)"
+                (input)="setValue(userPromptKey, $any($event.target).value)">
+              </textarea>
+            </mat-form-field>
+            <button mat-stroked-button (click)="resetPrompt(userPromptKey)"
+              matTooltip="Standard-Prompt wiederherstellen">
+              <mat-icon>restart_alt</mat-icon>
+              Auf Standard zurücksetzen
+            </button>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

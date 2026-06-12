@@ -1,0 +1,20 @@
+[Unit]
+Description=PaperlessAI - Document Processing Service
+After=network.target
+
+[Service]
+Type=simple
+User=paperlessai
+WorkingDirectory=/opt/paperless-ai
+ExecStart=/usr/bin/dotnet /opt/paperless-ai/PaperlessAI.API.dll
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+[Install]
+WantedBy=multi-user.target

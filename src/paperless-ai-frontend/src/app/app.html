@@ -1,0 +1,44 @@
+<mat-sidenav-container class="app-container">
+  <mat-sidenav mode="side" opened class="sidenav">
+    <div class="sidenav-header">
+      <mat-icon>description</mat-icon>
+      <span>Paperless AI</span>
+    </div>
+    <mat-nav-list>
+      <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span matListItemTitle>Dashboard</span>
+      </a>
+      <mat-divider></mat-divider>
+      <p class="nav-section-label">Metadaten</p>
+      <a mat-list-item routerLink="/metadata/correspondents" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>person</mat-icon>
+        <span matListItemTitle>Korrespondenten</span>
+      </a>
+      <a mat-list-item routerLink="/metadata/document-types" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>folder</mat-icon>
+        <span matListItemTitle>Dokumenttypen</span>
+      </a>
+      <a mat-list-item routerLink="/metadata/tags" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>label</mat-icon>
+        <span matListItemTitle>Tags</span>
+      </a>
+      <a mat-list-item routerLink="/metadata/storage-paths" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>storage</mat-icon>
+        <span matListItemTitle>Speicherpfade</span>
+      </a>
+      <a mat-list-item routerLink="/metadata/custom-fields" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>tune</mat-icon>
+        <span matListItemTitle>Custom Fields</span>
+      </a>
+      <mat-divider></mat-divider>
+      <a mat-list-item routerLink="/settings" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>settings</mat-icon>
+        <span matListItemTitle>Einstellungen</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

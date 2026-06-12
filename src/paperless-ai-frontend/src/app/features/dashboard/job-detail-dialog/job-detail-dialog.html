@@ -1,0 +1,191 @@
+<h2 mat-dialog-title>
+  <mat-icon class="title-icon">{{ job.jobType === 'Ocr' ? 'document_scanner' : job.jobType === 'Ai' ? 'psychology' : 'auto_awesome' }}</mat-icon>
+  {{ job.documentTitle || 'Dokument #' + job.documentId }}
+</h2>
+
+<mat-dialog-content>
+
+  <!-- Status + Typ + Paperless-Link -->
+  <div class="meta-row">
+    <mat-chip [color]="statusColor(job.status)" [highlighted]="true">{{ job.status }}</mat-chip>
+    <mat-chip>
+      {{ job.jobType === 'Ocr' ? 'OCR' : job.jobType === 'Ai' ? 'KI-Verarbeitung' : job.jobType }}
+    </mat-chip>
+    <span class="meta-date">{{ job.updatedAt | date:'dd.MM.yyyy HH:mm:ss' }}</span>
+    <a [href]="paperlessDocUrl" target="_blank" rel="noopener" class="paperless-link" mat-stroked-button>
+      <mat-icon>article</mat-icon>
+      In Paperless öffnen
+    </a>
+  </div>
+
+  <!-- Fehlermeldung -->
+  @if (job.status === 'Failed') {
+    <div class="error-box">
+      <mat-icon>error</mat-icon>
+      <div>
+        <strong>Fehlermeldung</strong>
+        <pre class="error-text">{{ job.error || 'Keine Fehlermeldung vorhanden' }}</pre>
+      </div>
+    </div>
+  }
+
+  <!-- OCR-Ergebnis -->
+  @if (ocrResult) {
+    <mat-divider class="section-divider"></mat-divider>
+    <h3 class="section-title">OCR-Ergebnis</h3>
+
+    <div class="ocr-stats">
+      <div class="stat-item">
+        <mat-icon>text_fields</mat-icon>
+        <div>
+          <div class="stat-value">{{ ocrResult.charCount | number }}</div>
+          <div class="stat-label">Zeichen extrahiert</div>
+        </div>
+      </div>
+      <div class="stat-item">
+        <mat-icon>picture_as_pdf</mat-icon>
+        <div>
+          <div class="stat-value">{{ formatBytes(ocrResult.pdfSizeBytes) }}</div>
+          <div class="stat-label">PDF-Größe</div>
+        </div>
+      </div>
+      <div class="stat-item" [class.verified]="ocrResult.contentVerified" [class.unverified]="!ocrResult.contentVerified">
+        <mat-icon>{{ ocrResult.contentVerified ? 'check_circle' : 'warning' }}</mat-icon>
+        <div>
+          <div class="stat-value">{{ ocrResult.contentVerified ? 'Bestätigt' : 'Abweichung' }}</div>
+          <div class="stat-label">In Paperless übernommen</div>
+        </div>
+      </div>
+    </div>
+
+    @if (!ocrResult.contentVerified) {
+      <div class="warning-box">
+        <mat-icon>warning</mat-icon>
+        <span>Content nicht korrekt übernommen — Paperless hat den Inhalt möglicherweise nach dem Schreiben überschrieben.</span>
+      </div>
+    }
+
+    <div class="preview-box">
+      <div class="preview-label">
+        Extrahierter Text
+        <span class="char-count">({{ ocrResult.charCount | number }} Zeichen gesamt)</span>
+      </div>
+      <pre class="preview-text">{{ previewText }}</pre>
+      @if (canExpand) {
+        <button mat-button class="expand-btn" (click)="previewExpanded = !previewExpanded">
+          <mat-icon>{{ previewExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ previewExpanded ? 'Weniger anzeigen' : 'Mehr anzeigen' }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- AI-Ergebnis -->
+  @if (aiResult) {
+    <mat-divider class="section-divider"></mat-divider>
+    <h3 class="section-title">KI-Ergebnis</h3>
+
+    @if (aiResult.reasoning) {
+      <div class="reasoning-box">
+        <mat-icon>psychology</mat-icon>
+        <p>{{ aiResult.reasoning }}</p>
+      </div>
+    }
+
+    <table class="result-table">
+      <tr>
+        <td class="label">Titel</td>
+        <td>{{ aiResult.title || '—' }}</td>
+      </tr>
+      <tr>
+        <td class="label">Datum</td>
+        <td>{{ aiResult.created || '—' }}</td>
+      </tr>
+      <tr>
+        <td class="label">Korrespondent ID</td>
+        <td>
+          {{ aiResult.correspondentId ?? '—' }}
+          @if (aiResult.newCorrespondent) {
+            <span class="new-badge"><mat-icon>add_circle</mat-icon> Neu: {{ aiResult.newCorrespondent }}</span>
+          }
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Dokumenttyp ID</td>
+        <td>
+          {{ aiResult.documentTypeId ?? '—' }}
+          @if (aiResult.newDocumentType) {
+            <span class="new-badge"><mat-icon>add_circle</mat-icon> Neu: {{ aiResult.newDocumentType }}</span>
+          }
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Speicherpfad ID</td>
+        <td>
+          {{ aiResult.storagePathId ?? '—' }}
+          @if (aiResult.newStoragePath) {
+            <span class="new-badge"><mat-icon>add_circle</mat-icon> Neu: {{ aiResult.newStoragePath }}</span>
+          }
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Tags (IDs)</td>
+        <td>
+          @if (aiResult.tagIds.length > 0) {
+            @for (id of aiResult.tagIds; track id) {
+              <mat-chip>{{ id }}</mat-chip>
+            }
+          } @else { — }
+          @if (aiResult.newTags?.length > 0) {
+            @for (t of aiResult.newTags; track t) {
+              <span class="new-badge"><mat-icon>add_circle</mat-icon> Neu: {{ t }}</span>
+            }
+          }
+        </td>
+      </tr>
+      @for (entry of customFieldEntries; track entry[0]) {
+        <tr>
+          <td class="label">Custom Field {{ entry[0] }}</td>
+          <td>{{ formatValue(entry[1]) }}</td>
+        </tr>
+      }
+    </table>
+  }
+
+  <!-- Gesendeter Prompt -->
+  @if (aiResult?.sentSystemPrompt || aiResult?.sentUserPrompt) {
+    <mat-divider class="section-divider"></mat-divider>
+    <h3 class="section-title">Gesendeter Prompt</h3>
+    <mat-tab-group class="prompt-tabs">
+      @if (aiResult?.sentSystemPrompt) {
+        <mat-tab label="System-Prompt">
+          <div class="prompt-box">
+            <button mat-icon-button class="copy-btn" (click)="copy(aiResult?.sentSystemPrompt)" matTooltip="Kopieren">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+            <pre class="prompt-text">{{ aiResult?.sentSystemPrompt }}</pre>
+          </div>
+        </mat-tab>
+      }
+      @if (aiResult?.sentUserPrompt) {
+        <mat-tab label="User-Prompt">
+          <div class="prompt-box">
+            <button mat-icon-button class="copy-btn" (click)="copy(aiResult?.sentUserPrompt)" matTooltip="Kopieren">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+            <pre class="prompt-text">{{ aiResult?.sentUserPrompt }}</pre>
+          </div>
+        </mat-tab>
+      }
+    </mat-tab-group>
+  }
+
+  @if (!ocrResult && !aiResult && job.status === 'Done') {
+    <p class="no-result">Job abgeschlossen — kein detailliertes Ergebnis verfügbar (älterer Job).</p>
+  }
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="dialogRef.close()">Schließen</button>
+</mat-dialog-actions>

@@ -1,0 +1,21 @@
+.page-container { padding: 24px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.page-title { font-size: 24px; font-weight: 500; margin: 0; }
+.page-subtitle { color: rgba(0,0,0,.54); margin-bottom: 24px; font-size: 14px; }
+
+.full-width { width: 100%; }
+.loading-center { display: flex; justify-content: center; padding: 40px; }
+
+.item-id { color: rgba(0,0,0,.38); font-size: 12px; }
+.description-text { color: rgba(0,0,0,.7); font-size: 14px; }
+.edit-field { width: 100%; min-width: 300px; }
+
+.empty-card mat-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  color: rgba(0,0,0,.54);
+}
+
+mat-spinner { display: inline-block; margin-right: 8px; }

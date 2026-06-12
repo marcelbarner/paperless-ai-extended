@@ -1,0 +1,22 @@
+# Paperless-NGX volumes
+consume/
+export/
+
+# .NET
+src/PaperlessAI.API/bin/
+src/PaperlessAI.API/obj/
+src/PaperlessAI.API/data/
+src/PaperlessAI.API/wwwroot/
+publish/
+
+# Angular
+src/paperless-ai-frontend/node_modules/
+src/paperless-ai-frontend/dist/
+src/paperless-ai-frontend/.angular/
+
+# Secrets – NIEMALS committen
+appsettings.Production.json
+appsettings.Local.json
+
+# Logs
+*.log

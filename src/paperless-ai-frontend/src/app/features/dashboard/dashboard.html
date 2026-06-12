@@ -1,0 +1,136 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <a mat-raised-button [href]="paperlessUrl()" target="_blank" rel="noopener">
+      <mat-icon>open_in_new</mat-icon>
+      Paperless öffnen
+    </a>
+  </div>
+
+  <!-- Statistik-Karten -->
+  <div class="stats-row">
+    <mat-card class="stat-card pending" (click)="onFilterChange('Pending')" [class.active]="statusFilter() === 'Pending'">
+      <mat-card-content>
+        <div class="stat-value">{{ statCount('Pending') }}</div>
+        <div class="stat-label">Ausstehend</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card processing" (click)="onFilterChange('Processing')" [class.active]="statusFilter() === 'Processing'">
+      <mat-card-content>
+        <div class="stat-value">{{ statCount('Processing') }}</div>
+        <div class="stat-label">In Bearbeitung</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card done" (click)="onFilterChange('Done')" [class.active]="statusFilter() === 'Done'">
+      <mat-card-content>
+        <div class="stat-value">{{ statCount('Done') }}</div>
+        <div class="stat-label">Abgeschlossen</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="stat-card failed" (click)="onFilterChange('Failed')" [class.active]="statusFilter() === 'Failed'">
+      <mat-card-content>
+        <div class="stat-value">{{ statCount('Failed') }}</div>
+        <div class="stat-label">Fehlgeschlagen</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Queue-Tabelle -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>Verarbeitungs-History</mat-card-title>
+      <div class="header-actions">
+        <mat-form-field appearance="outline" class="filter-select">
+          <mat-label>Status</mat-label>
+          <mat-select [value]="statusFilter()" (selectionChange)="onFilterChange($event.value)">
+            <mat-option value="">Alle</mat-option>
+            <mat-option value="Pending">Ausstehend</mat-option>
+            <mat-option value="Processing">In Bearbeitung</mat-option>
+            <mat-option value="Done">Abgeschlossen</mat-option>
+            <mat-option value="Failed">Fehlgeschlagen</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-icon-button (click)="load()" matTooltip="Aktualisieren">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (loading()) {
+        <div class="loading-center"><mat-spinner diameter="40"></mat-spinner></div>
+      } @else {
+        <table mat-table [dataSource]="jobs()" class="full-width">
+
+          <ng-container matColumnDef="documentTitle">
+            <th mat-header-cell *matHeaderCellDef>Dokument</th>
+            <td mat-cell *matCellDef="let job" class="doc-cell">
+              {{ job.documentTitle || 'Dokument #' + job.documentId }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="jobType">
+            <th mat-header-cell *matHeaderCellDef>Typ</th>
+            <td mat-cell *matCellDef="let job">
+              <mat-chip>{{ job.jobType }}</mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let job">
+              <mat-chip [color]="statusColor(job.status)" [highlighted]="true">
+                {{ job.status }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="updatedAt">
+            <th mat-header-cell *matHeaderCellDef>Zuletzt geändert</th>
+            <td mat-cell *matCellDef="let job">{{ job.updatedAt | date:'dd.MM.yy HH:mm' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let job" class="actions-cell">
+              @if (job.status === 'Failed') {
+                <button mat-icon-button color="warn"
+                  (click)="retry(job); $event.stopPropagation()"
+                  matTooltip="Erneut versuchen">
+                  <mat-icon>replay</mat-icon>
+                </button>
+              }
+              <a mat-icon-button
+                [href]="paperlessDocUrl(job)"
+                target="_blank" rel="noopener"
+                (click)="$event.stopPropagation()"
+                matTooltip="In Paperless öffnen">
+                <mat-icon>article</mat-icon>
+              </a>
+              <button mat-icon-button
+                (click)="openDetail(job); $event.stopPropagation()"
+                matTooltip="Job-Details anzeigen">
+                <mat-icon>info_outline</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            class="clickable-row"
+            (click)="openDetail(row)">
+          </tr>
+        </table>
+
+        <mat-paginator
+          [length]="total()"
+          [pageSize]="pageSize()"
+          [pageIndex]="page() - 1"
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          (page)="onPage($event)"
+          showFirstLastButtons>
+        </mat-paginator>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

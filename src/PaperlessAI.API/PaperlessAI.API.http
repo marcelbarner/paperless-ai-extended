@@ -1,0 +1,6 @@
+@PaperlessAI.API_HostAddress = http://localhost:5050
+
+GET {{PaperlessAI.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
