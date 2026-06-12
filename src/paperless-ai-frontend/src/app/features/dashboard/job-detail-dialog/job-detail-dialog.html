@@ -152,6 +152,31 @@
     </table>
   }
 
+  <!-- Tool Calls -->
+  @if (aiResult?.toolCalls?.length) {
+    <mat-divider class="section-divider"></mat-divider>
+    <h3 class="section-title">
+      <mat-icon class="section-icon">search</mat-icon>
+      Dokument-Suchen ({{ aiResult.toolCalls.length }})
+    </h3>
+    @for (call of aiResult.toolCalls; track $index; let i = $index) {
+      <div class="tool-call-box">
+        <div class="tool-call-query">
+          <mat-icon>search</mat-icon>
+          <strong>Suche {{ i + 1 }}:</strong> {{ call.query }}
+        </div>
+        <div class="tool-call-result">
+          @let parsed = tryParseJson(call.result);
+          @if (parsed && parsed.length === 0) {
+            <span class="no-results">Keine ähnlichen Dokumente gefunden</span>
+          } @else {
+            <pre class="tool-result-text">{{ call.result | json }}</pre>
+          }
+        </div>
+      </div>
+    }
+  }
+
   <!-- Gesendeter Prompt -->
   @if (aiResult?.sentSystemPrompt || aiResult?.sentUserPrompt) {
     <mat-divider class="section-divider"></mat-divider>

@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
+import { JsonPipe } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatButtonModule as MatBtn } from '@angular/material/button';
 import { ProcessingJob } from '../../../core/services/api';
@@ -20,6 +21,11 @@ interface OcrResult {
   preview: string;
   contentVerified: boolean;
   pdfSizeBytes: number;
+}
+
+interface ToolCallRecord {
+  query: string;
+  result: string;
 }
 
 interface AiResult {
@@ -37,12 +43,14 @@ interface AiResult {
   reasoning: string | null;
   sentSystemPrompt: string | null;
   sentUserPrompt: string | null;
+  toolCalls: ToolCallRecord[];
 }
 
 @Component({
   selector: 'app-job-detail-dialog',
   imports: [
     CommonModule,
+    JsonPipe,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
@@ -110,5 +118,10 @@ export class JobDetailDialogComponent {
 
   copy(text: string | null | undefined) {
     if (text) this.clipboard.copy(text);
+  }
+
+  tryParseJson(json: string): unknown[] | null {
+    try { const r = JSON.parse(json); return Array.isArray(r) ? r : null; }
+    catch { return null; }
   }
 }

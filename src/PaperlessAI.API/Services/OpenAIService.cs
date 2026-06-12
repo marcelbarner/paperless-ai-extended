@@ -124,6 +124,7 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
 
         string finalJson = string.Empty;
         var toolRound = 0;
+        var toolCallRecords = new List<ToolCallRecord>();
 
         while (toolRound <= MaxToolRounds)
         {
@@ -147,6 +148,7 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
                     logger.LogInformation("Suchergebnis ({Len} Zeichen): {Result}",
                         searchResult.Length, searchResult.Length > 200 ? searchResult[..200] + "…" : searchResult);
 
+                    toolCallRecords.Add(new ToolCallRecord { Query = query, Result = searchResult });
                     messages.Add(new ToolChatMessage(toolCall.Id, searchResult));
                 }
                 continue;
@@ -165,6 +167,7 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
 
         result.SentSystemPrompt = systemPrompt;
         result.SentUserPrompt = userPrompt;
+        result.ToolCalls = toolCallRecords;
 
         return result;
     }
@@ -186,4 +189,11 @@ public class DocumentProcessingResult
     public string? Reasoning { get; set; }
     public string? SentSystemPrompt { get; set; }
     public string? SentUserPrompt { get; set; }
+    public List<ToolCallRecord> ToolCalls { get; set; } = [];
+}
+
+public class ToolCallRecord
+{
+    public string Query { get; set; } = string.Empty;
+    public string Result { get; set; } = string.Empty;
 }
