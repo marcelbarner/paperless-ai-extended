@@ -15,6 +15,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { JsonPipe } from '@angular/common';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { ApiService, PlaygroundDocument, AiResult } from '../../core/services/api';
 
 @Component({
@@ -32,6 +33,7 @@ import { ApiService, PlaygroundDocument, AiResult } from '../../core/services/ap
 export class PlaygroundComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly snack = inject(MatSnackBar);
+  private readonly clipboard = inject(Clipboard);
 
   // Dokument-Auswahl
   searchQuery = signal('');
@@ -42,6 +44,10 @@ export class PlaygroundComponent implements OnInit {
   // Prompts
   systemPrompt = signal('');
   userPromptTemplate = signal('');
+
+  // Vorschau
+  previewing = signal(false);
+  preview = signal<{ systemPrompt: string; userPrompt: string; charCount: { system: number; user: number; total: number } } | null>(null);
 
   // Ausführung
   running = signal(false);
@@ -69,6 +75,17 @@ export class PlaygroundComponent implements OnInit {
   selectDoc(doc: PlaygroundDocument) {
     this.selectedDoc.set(doc);
     this.result.set(null);
+    this.preview.set(null);
+  }
+
+  showPreview() {
+    const doc = this.selectedDoc();
+    if (!doc) return;
+    this.previewing.set(true);
+    this.api.playgroundPreview(doc.id, this.systemPrompt(), this.userPromptTemplate()).subscribe({
+      next: p => { this.preview.set(p); this.previewing.set(false); },
+      error: () => { this.previewing.set(false); this.snack.open('Vorschau fehlgeschlagen', 'OK', { duration: 3000 }); }
+    });
   }
 
   run() {
@@ -76,6 +93,7 @@ export class PlaygroundComponent implements OnInit {
     if (!doc) return;
     this.running.set(true);
     this.result.set(null);
+    this.preview.set(null);
     this.api.playgroundRun(doc.id, this.systemPrompt(), this.userPromptTemplate()).subscribe({
       next: res => { this.result.set(res); this.running.set(false); },
       error: err => {
@@ -131,4 +149,6 @@ export class PlaygroundComponent implements OnInit {
   formatValue(v: unknown): string {
     return v === null || v === undefined ? '—' : String(v);
   }
+
+  copy(text: string) { this.clipboard.copy(text); }
 }

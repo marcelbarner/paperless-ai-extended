@@ -107,6 +107,14 @@ export class ApiService {
     return this.http.get<PlaygroundDocument[]>(`${this.base}/playground/documents${params}`);
   }
 
+  playgroundPreview(documentId: number, systemPrompt: string, userPromptTemplate: string): Observable<{
+    systemPrompt: string; userPrompt: string;
+    charCount: { system: number; user: number; total: number };
+  }> {
+    return this.http.post<any>(`${this.base}/playground/preview-prompt`,
+      { documentId, systemPrompt, userPromptTemplate });
+  }
+
   playgroundRun(documentId: number, systemPrompt: string, userPromptTemplate: string): Observable<AiResult> {
     return this.http.post<AiResult>(`${this.base}/playground/run`,
       { documentId, systemPrompt, userPromptTemplate });

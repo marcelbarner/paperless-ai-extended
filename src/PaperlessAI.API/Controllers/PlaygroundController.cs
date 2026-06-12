@@ -30,6 +30,32 @@ public class PlaygroundController(
         return Ok(raw);
     }
 
+    // --- Prompt-Vorschau (aufgelöst, ohne KI-Call) ---
+
+    [HttpPost("preview-prompt")]
+    public async Task<IActionResult> PreviewPrompt([FromBody] PlaygroundRunRequest request, CancellationToken ct)
+    {
+        var doc = await paperless.GetDocumentAsync(request.DocumentId, ct);
+        if (doc is null) return NotFound($"Dokument {request.DocumentId} nicht gefunden");
+
+        var metadataContext = await contextBuilder.BuildAsync(ct);
+        var resolvedUser = request.UserPromptTemplate
+            .Replace("{METADATA_CONTEXT}", metadataContext)
+            .Replace("{DOCUMENT_CONTENT}", doc.Content);
+
+        return Ok(new
+        {
+            systemPrompt = request.SystemPrompt,
+            userPrompt = resolvedUser,
+            charCount = new
+            {
+                system = request.SystemPrompt.Length,
+                user = resolvedUser.Length,
+                total = request.SystemPrompt.Length + resolvedUser.Length
+            }
+        });
+    }
+
     // --- Playground-Run (nicht auf Paperless anwenden) ---
 
     [HttpPost("run")]

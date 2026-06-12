@@ -84,7 +84,16 @@
       </mat-card-content>
     </mat-card>
 
-    <!-- 3. Ausführen -->
+    <!-- 3. Vorschau -->
+    <button mat-stroked-button class="preview-btn"
+      [disabled]="!selectedDoc() || previewing()"
+      (click)="showPreview()">
+      @if (previewing()) { <mat-spinner diameter="18"></mat-spinner> }
+      @else { <mat-icon>visibility</mat-icon> }
+      Prompt-Vorschau
+    </button>
+
+    <!-- 4. Ausführen -->
     <button mat-raised-button color="primary" class="run-btn"
       [disabled]="!selectedDoc() || running()"
       (click)="run()">
@@ -103,6 +112,44 @@
         <p>Wähle ein Dokument und klicke "KI ausführen".</p>
         <p>Das Ergebnis wird hier angezeigt, ohne Paperless zu ändern.</p>
       </div>
+    }
+
+    <!-- Prompt-Vorschau -->
+    @if (preview(); as pv) {
+      <mat-card class="result-card preview-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon class="preview-icon">visibility</mat-icon>
+            Aufgelöster Prompt
+          </mat-card-title>
+          <mat-card-subtitle>
+            Gesamt {{ pv.charCount.total | number }} Zeichen
+            (System: {{ pv.charCount.system | number }}, User: {{ pv.charCount.user | number }})
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-tab-group>
+            <mat-tab label="System-Prompt">
+              <div class="prompt-header">
+                <span class="char-badge">{{ pv.charCount.system | number }} Zeichen</span>
+                <button mat-icon-button (click)="copy(pv.systemPrompt)" matTooltip="Kopieren">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+              <pre class="prompt-preview-box">{{ pv.systemPrompt }}</pre>
+            </mat-tab>
+            <mat-tab label="User-Prompt (vollständig)">
+              <div class="prompt-header">
+                <span class="char-badge">{{ pv.charCount.user | number }} Zeichen</span>
+                <button mat-icon-button (click)="copy(pv.userPrompt)" matTooltip="Kopieren">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+              <pre class="prompt-preview-box">{{ pv.userPrompt }}</pre>
+            </mat-tab>
+          </mat-tab-group>
+        </mat-card-content>
+      </mat-card>
     }
 
     @if (running()) {
