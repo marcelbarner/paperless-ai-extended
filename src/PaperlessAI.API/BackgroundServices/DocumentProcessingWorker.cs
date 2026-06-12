@@ -163,10 +163,13 @@ public class DocumentProcessingWorker(
         logger.LogInformation("AI Job #{Id}: Sende an Azure OpenAI ({ContentLen} Zeichen, {MetaLen} Zeichen Kontext)",
             job.Id, content.Length, metadataContext.Length);
 
+        var ocrTagName = settings.Get(PaperlessPollingService.OcrTagKey) ?? PaperlessPollingService.DefaultOcrTagName;
+        var aiTagName = settings.Get(PaperlessPollingService.AiTagKey) ?? PaperlessPollingService.DefaultAiTagName;
+
         var result = await openAi.ProcessDocumentAsync(
             content,
             metadataContext,
-            (query, token) => paperless.SearchDocumentsAsync(query, 5, token),
+            (query, token) => paperless.SearchDocumentsAsync(query, 5, [ocrTagName, aiTagName], token),
             ct);
         logger.LogInformation(
             "AI Job #{Id}: Titel='{Title}' | Datum={Date} | Korrespondent={Corr} | Typ={DType} | Tags=[{Tags}] | Pfad={Path}",
@@ -182,7 +185,6 @@ public class DocumentProcessingWorker(
         await ResolveNewEntitiesAsync(paperless, db, result, ct);
         await ApplyAiResultAsync(paperless, doc, job.DocumentId, result, ct);
 
-        var aiTagName = settings.Get(PaperlessPollingService.AiTagKey) ?? PaperlessPollingService.DefaultAiTagName;
         await RemoveTagAsync(paperless, job.DocumentId, aiTagName, ct);
 
         var resultJson = JsonSerializer.Serialize(result, CamelCaseOptions);

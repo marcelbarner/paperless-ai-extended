@@ -50,11 +50,34 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
     public async Task<byte[]> DownloadDocumentAsync(int documentId, CancellationToken ct = default)
         => await BuildClient().GetByteArrayAsync($"documents/{documentId}/download/", ct);
 
-    public async Task<string> SearchDocumentsAsync(string query, int limit = 5, CancellationToken ct = default)
+    public async Task<string> SearchDocumentsAsync(
+        string query,
+        int limit = 5,
+        IEnumerable<string>? excludeTagNames = null,
+        CancellationToken ct = default)
     {
-        var url = $"documents/?search={Uri.EscapeDataString(query)}&page_size={limit}&ordering=-created";
+        // Mehr laden als benötigt, damit nach dem Filtern noch genug übrig bleiben
+        var fetchSize = limit * 3;
+        var url = $"documents/?search={Uri.EscapeDataString(query)}&page_size={fetchSize}&ordering=-created";
         var page = await BuildClient().GetFromJsonAsync<PaperlessPagedResult<PaperlessDocument>>(url, JsonOptions, ct);
-        var results = (page?.Results ?? []).Select(d => new
+        var docs = page?.Results ?? [];
+
+        // Dokumente mit Automation-Tags herausfiltern (noch nicht verarbeitet)
+        if (excludeTagNames?.Any() == true)
+        {
+            var excludeNames = new HashSet<string>(excludeTagNames, StringComparer.OrdinalIgnoreCase);
+            var allTags = await GetTagsAsync(ct);
+            var excludeIds = allTags
+                .Where(t => excludeNames.Contains(t.Name))
+                .Select(t => t.Id)
+                .ToHashSet();
+
+            docs = docs
+                .Where(d => !d.Tags.Any(id => excludeIds.Contains(id)))
+                .ToList();
+        }
+
+        var results = docs.Take(limit).Select(d => new
         {
             id = d.Id,
             title = d.Title,
