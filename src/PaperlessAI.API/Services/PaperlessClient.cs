@@ -50,6 +50,35 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
     public async Task<byte[]> DownloadDocumentAsync(int documentId, CancellationToken ct = default)
         => await BuildClient().GetByteArrayAsync($"documents/{documentId}/download/", ct);
 
+    public async Task<List<object>> SearchDocumentsForPlaygroundAsync(
+        string? search, int limit, IEnumerable<string> excludeTagNames, CancellationToken ct)
+    {
+        var url = string.IsNullOrWhiteSpace(search)
+            ? $"documents/?page_size={limit * 2}&ordering=-created"
+            : $"documents/?search={Uri.EscapeDataString(search)}&page_size={limit * 2}&ordering=-created";
+
+        var page = await BuildClient().GetFromJsonAsync<PaperlessPagedResult<PaperlessDocument>>(url, JsonOptions, ct);
+        var docs = page?.Results ?? [];
+
+        var excludeNames = new HashSet<string>(excludeTagNames, StringComparer.OrdinalIgnoreCase);
+        var allTags = await GetTagsAsync(ct);
+        var excludeIds = allTags.Where(t => excludeNames.Contains(t.Name)).Select(t => t.Id).ToHashSet();
+
+        return docs
+            .Where(d => !d.Tags.Any(id => excludeIds.Contains(id)))
+            .Take(limit)
+            .Select(d => (object)new
+            {
+                id = d.Id,
+                title = d.Title,
+                created_date = d.CreatedDate,
+                correspondent_id = d.CorrespondentId,
+                document_type_id = d.DocumentTypeId,
+                has_content = !string.IsNullOrWhiteSpace(d.Content)
+            })
+            .ToList();
+    }
+
     public async Task<string> SearchDocumentsAsync(
         string query,
         int limit = 5,

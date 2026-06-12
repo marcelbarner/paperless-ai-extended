@@ -16,5 +16,10 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () =>
       import('./features/settings/settings').then(m => m.SettingsComponent)
+  },
+  {
+    path: 'playground',
+    loadComponent: () =>
+      import('./features/playground/playground').then(m => m.PlaygroundComponent)
   }
 ];

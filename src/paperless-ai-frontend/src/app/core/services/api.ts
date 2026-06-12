@@ -100,4 +100,60 @@ export class ApiService {
       null
     );
   }
+
+  // Playground
+  playgroundDocuments(search?: string): Observable<PlaygroundDocument[]> {
+    const params = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.http.get<PlaygroundDocument[]>(`${this.base}/playground/documents${params}`);
+  }
+
+  playgroundRun(documentId: number, systemPrompt: string, userPromptTemplate: string): Observable<AiResult> {
+    return this.http.post<AiResult>(`${this.base}/playground/run`,
+      { documentId, systemPrompt, userPromptTemplate });
+  }
+
+  playgroundApply(documentId: number, result: AiResult): Observable<void> {
+    return this.http.post<void>(`${this.base}/playground/apply`, {
+      documentId,
+      title: result.title,
+      created: result.created,
+      correspondentId: result.correspondentId,
+      documentTypeId: result.documentTypeId,
+      tagIds: result.tagIds,
+      storagePathId: result.storagePathId,
+      customFields: result.customFields
+    });
+  }
+
+  playgroundSavePrompts(systemPrompt: string, userPromptTemplate: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/playground/save-prompts`,
+      { systemPrompt, userPromptTemplate });
+  }
+}
+
+export interface PlaygroundDocument {
+  id: number;
+  title: string;
+  created_date: string | null;
+  correspondent_id: number | null;
+  document_type_id: number | null;
+  has_content: boolean;
+}
+
+export interface AiResult {
+  title: string | null;
+  created: string | null;
+  correspondentId: number | null;
+  newCorrespondent: string | null;
+  documentTypeId: number | null;
+  newDocumentType: string | null;
+  tagIds: number[];
+  newTags: string[];
+  storagePathId: number | null;
+  newStoragePath: string | null;
+  customFields: Record<string, unknown>;
+  reasoning: string | null;
+  sentSystemPrompt: string | null;
+  sentUserPrompt: string | null;
+  toolCalls: { query: string; result: string }[];
 }

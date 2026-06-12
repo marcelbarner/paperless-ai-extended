@@ -80,16 +80,36 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
             .GetChatClient(deployment);
     }
 
-    public async Task<DocumentProcessingResult> ProcessDocumentAsync(
+    public Task<DocumentProcessingResult> ProcessDocumentWithPromptsAsync(
+        string documentContent,
+        string metadataContext,
+        string systemPrompt,
+        string userPromptTemplate,
+        Func<string, CancellationToken, Task<string>> searchDocuments,
+        CancellationToken ct = default)
+        => RunAsync(documentContent, metadataContext, systemPrompt, userPromptTemplate, searchDocuments, ct);
+
+    public Task<DocumentProcessingResult> ProcessDocumentAsync(
         string documentContent,
         string metadataContext,
         Func<string, CancellationToken, Task<string>> searchDocuments,
         CancellationToken ct = default)
     {
-        logger.LogInformation("Sende Dokument an Azure OpenAI");
-
         var systemPrompt = settings.Get(SystemPromptKey) ?? DefaultSystemPrompt;
         var userTemplate = settings.Get(UserPromptTemplateKey) ?? DefaultUserPromptTemplate;
+        return RunAsync(documentContent, metadataContext, systemPrompt, userTemplate, searchDocuments, ct);
+    }
+
+    private async Task<DocumentProcessingResult> RunAsync(
+        string documentContent,
+        string metadataContext,
+        string systemPrompt,
+        string userTemplate,
+        Func<string, CancellationToken, Task<string>> searchDocuments,
+        CancellationToken ct)
+    {
+        logger.LogInformation("Sende Dokument an Azure OpenAI");
+
         var userPrompt = userTemplate
             .Replace("{METADATA_CONTEXT}", metadataContext)
             .Replace("{DOCUMENT_CONTENT}", documentContent);

@@ -36,4 +36,18 @@ public class AppSettingsService(IServiceScopeFactory scopeFactory, IConfiguratio
 
         return fallback[key];
     }
+
+    public async Task SetAsync(string key, string value, CancellationToken ct = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var entry = await db.AppConfigurations.FirstOrDefaultAsync(c => c.Key == key, ct);
+        if (entry is null)
+            db.AppConfigurations.Add(new Models.Domain.AppConfiguration { Key = key, Value = value });
+        else
+            entry.Value = value;
+
+        await db.SaveChangesAsync(ct);
+    }
 }

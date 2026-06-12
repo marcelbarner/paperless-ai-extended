@@ -1,0 +1,223 @@
+<div class="playground-layout">
+
+  <!-- LINKE SPALTE: Konfiguration -->
+  <div class="config-column">
+
+    <!-- 1. Dokument auswählen -->
+    <mat-card class="config-card">
+      <mat-card-header>
+        <mat-card-title>1. Dokument auswählen</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Suchen…</mat-label>
+          <input matInput [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            (keyup.enter)="searchDocuments()" />
+          <button matSuffix mat-icon-button (click)="searchDocuments()">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        @if (loadingDocs()) {
+          <div class="center-spin"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else {
+          <mat-selection-list [multiple]="false" class="doc-list">
+            @for (doc of documents(); track doc.id) {
+              <mat-list-option [value]="doc"
+                [selected]="selectedDoc()?.id === doc.id"
+                (click)="selectDoc(doc)">
+                <mat-icon matListItemIcon [class.no-content]="!doc.has_content">
+                  {{ doc.has_content ? 'description' : 'description' }}
+                </mat-icon>
+                <span matListItemTitle>{{ doc.title }}</span>
+                <span matListItemLine>{{ doc.created_date ?? '–' }}</span>
+              </mat-list-option>
+            }
+            @empty {
+              <p class="empty-hint">Keine Dokumente gefunden</p>
+            }
+          </mat-selection-list>
+        }
+
+        @if (selectedDoc()) {
+          <div class="selected-badge">
+            <mat-icon>check_circle</mat-icon>
+            {{ selectedDoc()!.title }}
+            @if (!selectedDoc()!.has_content) {
+              <span class="warn-text"> (kein OCR-Inhalt)</span>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- 2. Prompts -->
+    <mat-card class="config-card">
+      <mat-card-header>
+        <mat-card-title>2. Prompts</mat-card-title>
+        <mat-card-subtitle>Anpassungen werden beim Ausführen verwendet, aber nicht automatisch gespeichert.</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-tab-group>
+          <mat-tab label="System-Prompt">
+            <mat-form-field appearance="outline" class="full-width prompt-field">
+              <textarea matInput rows="8" [ngModel]="systemPrompt()"
+                (ngModelChange)="systemPrompt.set($event)"></textarea>
+            </mat-form-field>
+          </mat-tab>
+          <mat-tab label="User-Prompt">
+            <mat-form-field appearance="outline" class="full-width prompt-field">
+              <textarea matInput rows="12" [ngModel]="userPromptTemplate()"
+                (ngModelChange)="userPromptTemplate.set($event)"></textarea>
+            </mat-form-field>
+          </mat-tab>
+        </mat-tab-group>
+        <div class="prompt-actions">
+          <button mat-stroked-button (click)="resetPrompts()" matTooltip="Gespeicherte Prompts laden">
+            <mat-icon>restart_alt</mat-icon> Zurücksetzen
+          </button>
+          <button mat-stroked-button color="primary" (click)="savePrompts()" [disabled]="savingPrompts()">
+            <mat-icon>save</mat-icon> Prompts speichern
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- 3. Ausführen -->
+    <button mat-raised-button color="primary" class="run-btn"
+      [disabled]="!selectedDoc() || running()"
+      (click)="run()">
+      @if (running()) { <mat-spinner diameter="20"></mat-spinner> }
+      @else { <mat-icon>play_arrow</mat-icon> }
+      KI ausführen
+    </button>
+
+  </div>
+
+  <!-- RECHTE SPALTE: Ergebnis -->
+  <div class="result-column">
+    @if (!result() && !running()) {
+      <div class="empty-result">
+        <mat-icon>science</mat-icon>
+        <p>Wähle ein Dokument und klicke "KI ausführen".</p>
+        <p>Das Ergebnis wird hier angezeigt, ohne Paperless zu ändern.</p>
+      </div>
+    }
+
+    @if (running()) {
+      <div class="empty-result">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p>KI analysiert Dokument…</p>
+      </div>
+    }
+
+    @if (result(); as res) {
+      <!-- Ergebnis-Header -->
+      <div class="result-header">
+        <h2>KI-Ergebnis</h2>
+        <div class="result-actions">
+          <button mat-raised-button color="accent" (click)="apply()" [disabled]="applying()">
+            @if (applying()) { <mat-spinner diameter="18"></mat-spinner> }
+            @else { <mat-icon>check</mat-icon> }
+            Auf Paperless anwenden
+          </button>
+          <button mat-stroked-button color="primary" (click)="savePrompts()" [disabled]="savingPrompts()">
+            <mat-icon>save</mat-icon> Prompts speichern
+          </button>
+        </div>
+      </div>
+
+      <!-- Extrahierte Metadaten -->
+      <mat-card class="result-card">
+        <mat-card-header><mat-card-title>Extrahierte Metadaten</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <table class="result-table">
+            <tr><td class="label">Titel</td><td>{{ res.title || '—' }}</td></tr>
+            <tr><td class="label">Datum</td><td>{{ res.created || '—' }}</td></tr>
+            <tr>
+              <td class="label">Korrespondent ID</td>
+              <td>
+                {{ res.correspondentId ?? '—' }}
+                @if (res.newCorrespondent) { <span class="new-badge">Neu: {{ res.newCorrespondent }}</span> }
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Dokumenttyp ID</td>
+              <td>
+                {{ res.documentTypeId ?? '—' }}
+                @if (res.newDocumentType) { <span class="new-badge">Neu: {{ res.newDocumentType }}</span> }
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Speicherpfad ID</td>
+              <td>
+                {{ res.storagePathId ?? '—' }}
+                @if (res.newStoragePath) { <span class="new-badge">Neu: {{ res.newStoragePath }}</span> }
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Tags</td>
+              <td>
+                @for (id of res.tagIds; track id) { <mat-chip>{{ id }}</mat-chip> }
+                @if (!res.tagIds.length) { — }
+                @for (t of res.newTags; track t) { <span class="new-badge">Neu: {{ t }}</span> }
+              </td>
+            </tr>
+            @for (entry of $any(res.customFields) | keyvalue; track entry.key) {
+              <tr><td class="label">Custom Field {{ entry.key }}</td><td>{{ formatValue(entry.value) }}</td></tr>
+            }
+          </table>
+          @if (res.reasoning) {
+            <div class="reasoning-box">
+              <mat-icon>psychology</mat-icon>
+              <p>{{ res.reasoning }}</p>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Tool Calls -->
+      @if (res.toolCalls?.length) {
+        <mat-card class="result-card">
+          <mat-card-header>
+            <mat-card-title>Dokument-Suchen ({{ res.toolCalls.length }})</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @for (call of res.toolCalls; track $index; let i = $index) {
+              <div class="tool-call-box">
+                <div class="tool-call-query">
+                  <mat-icon>search</mat-icon>
+                  <strong>Suche {{ i + 1 }}:</strong> {{ call.query }}
+                </div>
+                <div class="tool-call-result">
+                  @if (tryParseJson(call.result)?.length === 0) {
+                    <span class="no-results">Keine Treffer</span>
+                  } @else {
+                    <pre class="tool-result-text">{{ call.result | json }}</pre>
+                  }
+                </div>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Prompt-Details (aufklappbar) -->
+      <mat-expansion-panel class="result-card">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Gesendeter Prompt</mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-tab-group>
+          @if (res.sentSystemPrompt) {
+            <mat-tab label="System"><pre class="prompt-preview">{{ res.sentSystemPrompt }}</pre></mat-tab>
+          }
+          @if (res.sentUserPrompt) {
+            <mat-tab label="User"><pre class="prompt-preview">{{ res.sentUserPrompt }}</pre></mat-tab>
+          }
+        </mat-tab-group>
+      </mat-expansion-panel>
+    }
+  </div>
+
+</div>
