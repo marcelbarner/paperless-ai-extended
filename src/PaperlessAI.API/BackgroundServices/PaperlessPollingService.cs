@@ -15,11 +15,14 @@ public class PaperlessPollingService(
     public const string OcrTagKey = "Paperless:OcrTagName";
     public const string AiTagKey = "Paperless:AiTagName";
     public const string ErrorTagKey = "Paperless:ErrorTagName";
+    public const string ReviewTagKey = "Paperless:ReviewTagName";
     public const string DefaultOcrTagName = "paperless-ai-ocr";
     public const string DefaultAiTagName = "paperless-ai-process";
     public const string DefaultErrorTagName = "paperless-ai-error";
+    public const string DefaultReviewTagName = "paperless-ai-review";
 
     private string ErrorTagName => settings.Get(ErrorTagKey) ?? DefaultErrorTagName;
+    private string ReviewTagName => settings.Get(ReviewTagKey) ?? DefaultReviewTagName;
 
     private string OcrTagName => settings.Get(OcrTagKey) ?? DefaultOcrTagName;
     private string AiTagName => settings.Get(AiTagKey) ?? DefaultAiTagName;
@@ -157,9 +160,11 @@ public class PaperlessPollingService(
         await EnsureTagAsync(paperless, OcrTagName, "#1565C0", ct);
         await EnsureTagAsync(paperless, AiTagName, "#2E7D32", ct);
         await EnsureTagAsync(paperless, ErrorTagName, "#C62828", ct);
+        await EnsureTagAsync(paperless, ReviewTagName, "#F59E0B", ct);
 
-        logger.LogInformation("Polling gestartet – OCR-Tag: '{Ocr}', AI-Tag: '{Ai}', Fehler-Tag: '{Err}'",
-            OcrTagName, AiTagName, ErrorTagName);
+        logger.LogInformation(
+            "Polling gestartet – OCR-Tag: '{Ocr}', AI-Tag: '{Ai}', Fehler-Tag: '{Err}', Review-Tag: '{Rev}'",
+            OcrTagName, AiTagName, ErrorTagName, ReviewTagName);
     }
 
     private async Task EnsureTagAsync(PaperlessClient client, string name, string color, CancellationToken ct)

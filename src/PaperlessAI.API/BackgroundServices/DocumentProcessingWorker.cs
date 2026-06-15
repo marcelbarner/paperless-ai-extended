@@ -188,6 +188,7 @@ public class DocumentProcessingWorker(
         await ApplyAiResultAsync(paperless, doc, job.DocumentId, result, ct);
 
         await RemoveTagAsync(paperless, job.DocumentId, aiTagName, ct);
+        await AddReviewTagAsync(paperless, job.DocumentId, ct);
 
         var resultJson = JsonSerializer.Serialize(result, CamelCaseOptions);
         await SetStatus(db, job.Id, JobStatus.Done, ct, resultJson: resultJson);
@@ -398,6 +399,27 @@ public class DocumentProcessingWorker(
         else
         {
             logger.LogInformation("ApplyAI: Keine Felder zum Aktualisieren");
+        }
+    }
+
+    private async Task AddReviewTagAsync(PaperlessClient paperless, int documentId, CancellationToken ct)
+    {
+        var reviewTagName = settings.Get(PaperlessPollingService.ReviewTagKey) ?? PaperlessPollingService.DefaultReviewTagName;
+        try
+        {
+            var reviewTag = await paperless.GetTagByNameAsync(reviewTagName, ct);
+            if (reviewTag is null) return;
+
+            var doc = await paperless.GetDocumentAsync(documentId, ct);
+            if (doc is null || doc.Tags.Contains(reviewTag.Id)) return;
+
+            var updatedTags = doc.Tags.Append(reviewTag.Id).ToList();
+            await paperless.UpdateDocumentAsync(documentId, new { tags = updatedTags }, ct);
+            logger.LogInformation("Review-Tag '{Tag}' an Dokument {DocId} gesetzt", reviewTagName, documentId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fehler beim Setzen des Review-Tags für Dokument {DocId}", documentId);
         }
     }
 

@@ -30,6 +30,7 @@ const CONNECTION_FIELDS: SettingField[][] = [
     { key: 'Paperless:OcrTagName', label: 'Tag-Name für OCR', hint: 'Standard: paperless-ai-ocr' },
     { key: 'Paperless:AiTagName', label: 'Tag-Name für KI-Verarbeitung', hint: 'Standard: paperless-ai-process' },
     { key: 'Paperless:ErrorTagName', label: 'Tag-Name für Fehler', hint: 'Standard: paperless-ai-error – wird bei fehlgeschlagenen Jobs gesetzt' },
+    { key: 'Paperless:ReviewTagName', label: 'Tag-Name für Review', hint: 'Standard: paperless-ai-review – wird nach erfolgreichem KI-Job gesetzt' },
     { key: 'Polling:IntervalSeconds', label: 'Polling-Intervall (Sekunden)', hint: 'Standard: 30' }
   ],
   [
