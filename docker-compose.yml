@@ -33,8 +33,24 @@ services:
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
 
+  paperless-ai:
+    build: .
+    image: paperless-ai:latest
+    restart: unless-stopped
+    depends_on:
+      - webserver
+    ports:
+      - "8001:5000"
+    volumes:
+      - paperless-ai-data:/app/data
+    environment:
+      # Paperless im selben Compose-Netzwerk über Service-Name erreichbar
+      Paperless__BaseUrl: http://webserver:8000
+      # Azure-Credentials und weitere Einstellungen über die UI unter :8001/settings
+
 volumes:
   data:
   media:
   pgdata:
   redisdata:
+  paperless-ai-data:

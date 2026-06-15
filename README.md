@@ -68,7 +68,7 @@ Autonome Erweiterung für [Paperless-NGX](https://docs.paperless-ngx.com/), die 
 
 ---
 
-## Installation (Proxmox LXC)
+## Installation (Docker)
 
 ### Erstinstallation — ein Befehl
 
@@ -78,32 +78,43 @@ Auf dem LXC als `root`:
 curl -fsSL https://raw.githubusercontent.com/marcelbarner/paperless-ai-extended/main/install.sh | bash
 ```
 
-Das Skript erledigt alles automatisch:
-- Installiert .NET 10 SDK, Node.js 20, nginx
-- Klont das Repository nach `/opt/paperless-ai`
-- Baut Backend und Frontend
-- Richtet systemd-Dienst und nginx-Reverse-Proxy ein
-- Legt globalen `paperless-ai-update`-Befehl an
+Das Skript installiert Docker (falls nötig), klont das Repo und startet alle Services per `docker compose up`.
 
-Die App ist danach unter `http://<lxc-ip>` erreichbar.
+| Service | URL |
+|---|---|
+| **Paperless-NGX** | `http://<ip>:8000` |
+| **PaperlessAI** | `http://<ip>:8001` |
 
-### Updates — ein Befehl
+### Erster Start
+
+```bash
+# Paperless Admin-User anlegen
+docker compose exec webserver python3 manage.py createsuperuser
+
+# Daten importieren
+bash /opt/paperless-ai/data/import.sh \
+  --paperless-url http://webserver:8000 \
+  --paperless-token <TOKEN> \
+  --app-url http://localhost:5000
+```
+
+### Update — ein Befehl
 
 ```bash
 paperless-ai-update
 ```
 
-Führt automatisch aus: `git pull` → Backend neu bauen → Frontend neu bauen → Dienst neustarten.
+Führt aus: `git pull` → Docker-Image neu bauen → Container neu starten. Paperless-NGX läuft durch.
 
-> Die SQLite-Datenbank unter `/opt/paperless-ai/data/` bleibt bei jedem Update erhalten.
-
-### Dienst verwalten
+### Container verwalten
 
 ```bash
-journalctl -u paperless-ai -f      # Live-Logs
-systemctl status paperless-ai      # Status
-systemctl restart paperless-ai     # Neustart
+docker compose logs -f paperless-ai    # Live-Logs
+docker compose restart paperless-ai   # Neustart
+docker compose ps                      # Status aller Services
 ```
+
+Die SQLite-DB liegt im Docker-Volume `paperless-ai-data` und bleibt bei Updates erhalten.
 
 ---
 

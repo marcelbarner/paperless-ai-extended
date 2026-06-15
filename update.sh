@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# PaperlessAI – Update
+# PaperlessAI – Update (Docker)
 # Ausführen mit:  paperless-ai-update
 set -euo pipefail
 
 APP_DIR="/opt/paperless-ai"
-SERVICE_USER="paperlessai"
 SKIP_PULL="${1:-}"
 
 cd "$APP_DIR"
@@ -13,7 +12,7 @@ echo "======================================="
 echo " PaperlessAI – Update"
 echo "======================================="
 
-# --- Git Pull ---
+# Git Pull
 if [ "$SKIP_PULL" != "--skip-pull" ]; then
   echo "[*] Ziehe Updates von GitHub..."
   OLD=$(git rev-parse --short HEAD)
@@ -26,39 +25,23 @@ if [ "$SKIP_PULL" != "--skip-pull" ]; then
   fi
 fi
 
-# --- Backend bauen ---
-echo "[*] Baue Backend..."
-cd "$APP_DIR/src/PaperlessAI.API"
-dotnet publish -c Release -o "$APP_DIR/publish" --no-self-contained -r linux-x64 -q
+# PaperlessAI neu bauen und starten (andere Services laufen weiter)
+echo "[*] Baue PaperlessAI Docker-Image..."
+docker compose build paperless-ai
 
-# --- Frontend bauen ---
-echo "[*] Baue Frontend..."
-cd "$APP_DIR/src/paperless-ai-frontend"
-npm ci --silent
-npx ng build --configuration production --no-progress 2>&1 | tail -3
+echo "[*] Starte PaperlessAI neu..."
+docker compose up -d --no-deps paperless-ai
 
-# --- Frontend in publish/wwwroot ---
-echo "[*] Kopiere Frontend..."
-mkdir -p "$APP_DIR/publish/wwwroot"
-cp -r "$APP_DIR/src/paperless-ai-frontend/dist/paperless-ai-frontend/browser/." \
-      "$APP_DIR/publish/wwwroot/"
-
-# --- Berechtigungen + Neustart ---
-chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR/publish"
-chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR/data"
-
-if systemctl is-active --quiet paperless-ai 2>/dev/null; then
-  echo "[*] Starte Dienst neu..."
-  systemctl restart paperless-ai
-  sleep 2
-  systemctl is-active --quiet paperless-ai \
-    && echo "[✓] Dienst läuft" \
-    || { echo "[✗] Dienst nicht gestartet:"; journalctl -u paperless-ai -n 10 --no-pager; exit 1; }
+sleep 3
+if docker compose ps paperless-ai | grep -q "running\|Up"; then
+  VERSION=$(git log -1 --format='%h – %s')
+  echo ""
+  echo "======================================="
+  echo " Update abgeschlossen!"
+  echo " Version: $VERSION"
+  echo "======================================="
+else
+  echo "FEHLER: Container nicht gestartet."
+  docker compose logs --tail=20 paperless-ai
+  exit 1
 fi
-
-VERSION=$(git log -1 --format='%h – %s')
-echo ""
-echo "======================================="
-echo " Update abgeschlossen!"
-echo " Version: $VERSION"
-echo "======================================="

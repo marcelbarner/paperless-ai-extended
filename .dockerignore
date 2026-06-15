@@ -1,0 +1,9 @@
+**/.git
+**/.angular
+**/node_modules
+**/dist
+**/bin
+**/obj
+src/PaperlessAI.API/data
+publish
+*.log
