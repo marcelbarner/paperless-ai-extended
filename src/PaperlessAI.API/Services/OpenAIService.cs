@@ -27,6 +27,22 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
 
         Du hast Zugriff auf das Tool 'search_documents', um ähnliche bereits vorhandene Dokumente zu finden.
         Nutze es gezielt um konsistente Benennungen und Metadaten-Zuweisungen zu gewährleisten.
+
+        ## Beschreibungen für Entitäten
+        Korrespondenten-Beschreibungen sollen ALLE bekannten Namensformen enthalten die im Dokument oder in Folgedokumenten vorkommen können.
+        Format: "Primärname, Alias1, Alias2, domain.de – kurze Charakterisierung"
+        Beispiel: "Deutsche Telekom AG, Telekom, DTAG, telekom.de, magenta.de – Telekommunikationsanbieter für Mobilfunk und Festnetz"
+        Beschreibungen helfen der KI, denselben Absender in künftigen Dokumenten sicher zu erkennen, auch wenn der Name leicht abweicht.
+        Nutze description_updates um Beschreibungen bestehender Korrespondenten um neue Aliases zu ergänzen, wenn das Dokument einen bisher unbekannten Namen des Absenders zeigt.
+
+        ## Tag-Strategie
+        Wähle Tags sinnvoll nach diesen Kategorien (Mehrfachauswahl möglich und erwünscht):
+        - Status (ein passender wählen): Offen = unbezahlte Rechnung oder offene Aufgabe | Erledigt = bezahlt oder abgehakt | Archiv = nur Aufbewahrung
+        - Dringlichkeit: Wichtig | Frist beachten (wenn Fristen, Kündigungsfristen oder Zahlungsfristen im Dokument)
+        - Steuer: Steuerrelevant = allgemein absetzbar | Steuerdokument = belegt Steuererklärung direkt | Werbungskosten | Haushaltsnahe Leistung
+        - Herkunft: Eingang = empfangenes Dokument | Verschickt = selbst versendetes Dokument
+        - Format: Original = physisches Original vorhanden | Digitales Original = nur digital
+        - Muster: Wiederkehrend = monatliche/jährliche Dokumente wie Lohnabrechnung, Stromrechnung
         """;
 
     public const string DefaultUserPromptTemplate =
@@ -38,7 +54,11 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
         4. Den passenden Dokumenttyp (document_type_id) – oder einen neuen vorschlagen (new_document_type) wenn erlaubt
         5. Passende Tags (tag_ids als Array) – oder neue vorschlagen (new_tags) wenn erlaubt
         6. Den passenden Speicherpfad (storage_path_id) – oder einen neuen vorschlagen (new_storage_path) wenn erlaubt
-        7. Werte für Custom Fields (custom_fields als Objekt mit Feld-ID als Schlüssel)
+        7. Werte für Custom Fields (custom_fields als Objekt mit Feld-ID als Schlüssel) – Formatregeln:
+           - monetary: Dezimalzahl mit Punkt, keine Währungssymbole (z.B. 1500.00)
+           - date: Format YYYY-MM-DD
+           - integer: nur Ganzzahl
+           - boolean: true oder false
         8. Neue Custom Fields anlegen (new_custom_fields) wenn erlaubt – mit Name, Datentyp und Wert
 
         Nutze 'search_documents' um ähnliche Dokumente zu finden und Konsistenz zu gewährleisten.
@@ -73,11 +93,12 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
         Regeln:
         - Setze new_* Felder nur wenn in der Sektion 'Anlegen-Berechtigungen' als erlaubt markiert.
         - new_custom_fields: Array von {"name","data_type","value"} Objekten.
-        - new_*_description: Beschreibung für neu angelegte Entitäten (Aliases, Zweck, Erkennungsmerkmale).
+        - new_*_description: Beschreibung für neu angelegte Entitäten. Bei Korrespondenten: alle Namensformen als Aliases (siehe System-Prompt).
         - new_tag_descriptions: Parallele Liste zu new_tags, gleiche Reihenfolge.
         - description_updates: Dictionary mit Key "EntityType:ID" (z.B. "Correspondent:3") und neuem Beschreibungstext.
-          Nutze dies um Beschreibungen bestehender Entitäten zu ergänzen, z.B. Aliases eines Korrespondenten die im Dokument vorkommen.
-          Nur aktualisieren wenn der neue Text wirklich nützlicher ist als der bisherige.
+          Pflicht-Anwendungsfall: Wenn im Dokument ein Absendername vorkommt der noch nicht in der Beschreibung des zugewiesenen Korrespondenten steht,
+          füge ihn als neuen Alias hinzu. Bestehende Beschreibung erweitern, nicht ersetzen.
+          Für andere Typen: nur aktualisieren wenn der neue Text den bestehenden klar verbessert.
         """;
 
     public bool CanCreate(string key) =>

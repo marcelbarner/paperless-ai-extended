@@ -168,8 +168,12 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
             new { name, path = name }, ct);
 
     public async Task<PaperlessCustomField> CreateCustomFieldAsync(string name, string dataType, CancellationToken ct = default)
-        => await PostCreateAsync<PaperlessCustomField>("custom_fields/",
-            new { name, data_type = dataType }, ct);
+    {
+        object body = dataType == "monetary"
+            ? new { name, data_type = dataType, extra_data = new { default_currency = "EUR" } }
+            : new { name, data_type = dataType };
+        return await PostCreateAsync<PaperlessCustomField>("custom_fields/", body, ct);
+    }
 
     private async Task<T> PostCreateAsync<T>(string endpoint, object body, CancellationToken ct)
     {
