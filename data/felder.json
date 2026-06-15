@@ -1,9 +1,9 @@
 [
   {
-    "name": "Betrag (EUR)",
+    "name": "Betrag",
     "data_type": "monetary",
     "extra_data": { "default_currency": "EUR" },
-    "description": "Gesamtbetrag einer Rechnung oder Zahlung in Euro. Ermöglicht Suche und Summenbildung über Rechnungen."
+    "description": "Gesamtbetrag einer Rechnung oder Zahlung. Währungscode als Präfix angeben: EUR1500.00, USD3907.85, GBP250.00 etc. Immer 2 Dezimalstellen, Punkt als Trennzeichen."
   },
   {
     "name": "Fälligkeitsdatum",

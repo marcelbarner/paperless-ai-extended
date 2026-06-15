@@ -55,7 +55,8 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
         5. Passende Tags (tag_ids als Array) – oder neue vorschlagen (new_tags) wenn erlaubt
         6. Den passenden Speicherpfad (storage_path_id) – oder einen neuen vorschlagen (new_storage_path) wenn erlaubt
         7. Werte für Custom Fields (custom_fields als Objekt mit Feld-ID als Schlüssel) – Formatregeln:
-           - monetary: Dezimalzahl mit Punkt, keine Währungssymbole (z.B. 1500.00)
+           - monetary: Währungscode als 3-Buchstaben-Präfix + Betrag mit Punkt (z.B. EUR1500.00, USD3907.85, GBP250.00).
+             Immer die Währung aus dem Dokument übernehmen – nicht konvertieren. Kein Leerzeichen zwischen Code und Zahl.
            - date: Format YYYY-MM-DD
            - integer: nur Ganzzahl
            - boolean: true oder false
