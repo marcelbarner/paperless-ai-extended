@@ -158,6 +158,7 @@ foreach ($feld in $felder) {
             name      = $feld.name
             data_type = $feld.data_type ?? "string"
         }
+        if ($feld.extra_data) { $body['extra_data'] = $feld.extra_data }
         $created = Invoke-Paperless POST "custom_fields/" $body
         $existingId = $created.id
         Write-Ok "$($feld.name) [$($feld.data_type)] (ID=$existingId)"

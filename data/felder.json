@@ -2,6 +2,7 @@
   {
     "name": "Betrag (EUR)",
     "data_type": "monetary",
+    "extra_data": { "default_currency": "EUR" },
     "description": "Gesamtbetrag einer Rechnung oder Zahlung in Euro. Ermöglicht Suche und Summenbildung über Rechnungen."
   },
   {

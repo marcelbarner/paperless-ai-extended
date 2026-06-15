@@ -171,7 +171,9 @@ while IFS= read -r entry; do
   if [[ -n "$existing_id" ]]; then
     skip "$name (ID=$existing_id)"
   else
-    body=$(jq -n --arg n "$name" --arg d "$dtype" '{"name":$n,"data_type":$d}')
+    extra_data=$(echo "$entry" | jq -c '.extra_data // null')
+    body=$(jq -n --arg n "$name" --arg d "$dtype" --argjson e "$extra_data" \
+      'if $e != null then {"name":$n,"data_type":$d,"extra_data":$e} else {"name":$n,"data_type":$d} end')
     result=$(p_post "custom_fields/" "$body")
     existing_id=$(echo "$result" | jq -r '.id')
     ok "$name [$dtype] (ID=$existing_id)"
