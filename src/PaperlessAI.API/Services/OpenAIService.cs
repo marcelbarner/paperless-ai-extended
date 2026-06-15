@@ -63,10 +63,21 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
           "new_storage_path": null,
           "custom_fields": {},
           "new_custom_fields": [],
+          "new_correspondent_description": null,
+          "new_document_type_description": null,
+          "new_tag_descriptions": [],
+          "new_storage_path_description": null,
+          "description_updates": {},
           "reasoning": "Kurze Begründung"
         }
-        Setze new_* Felder nur wenn in der Sektion 'Anlegen-Berechtigungen' als erlaubt markiert und kein passender Eintrag in der Liste vorhanden ist.
-        new_custom_fields ist ein Array von Objekten: {"name": "Feldname", "data_type": "string|url|date|boolean|integer|float|monetary", "value": "Wert"}
+        Regeln:
+        - Setze new_* Felder nur wenn in der Sektion 'Anlegen-Berechtigungen' als erlaubt markiert.
+        - new_custom_fields: Array von {"name","data_type","value"} Objekten.
+        - new_*_description: Beschreibung für neu angelegte Entitäten (Aliases, Zweck, Erkennungsmerkmale).
+        - new_tag_descriptions: Parallele Liste zu new_tags, gleiche Reihenfolge.
+        - description_updates: Dictionary mit Key "EntityType:ID" (z.B. "Correspondent:3") und neuem Beschreibungstext.
+          Nutze dies um Beschreibungen bestehender Entitäten zu ergänzen, z.B. Aliases eines Korrespondenten die im Dokument vorkommen.
+          Nur aktualisieren wenn der neue Text wirklich nützlicher ist als der bisherige.
         """;
 
     public bool CanCreate(string key) =>
@@ -203,14 +214,26 @@ public class DocumentProcessingResult
     public string? Created { get; set; }
     public int? CorrespondentId { get; set; }
     public string? NewCorrespondent { get; set; }
+    public string? NewCorrespondentDescription { get; set; }
     public int? DocumentTypeId { get; set; }
     public string? NewDocumentType { get; set; }
+    public string? NewDocumentTypeDescription { get; set; }
     public List<int> TagIds { get; set; } = [];
     public List<string> NewTags { get; set; } = [];
+    public List<string> NewTagDescriptions { get; set; } = [];
     public int? StoragePathId { get; set; }
     public string? NewStoragePath { get; set; }
+    public string? NewStoragePathDescription { get; set; }
     public Dictionary<string, object?> CustomFields { get; set; } = [];
     public List<NewCustomFieldRequest> NewCustomFields { get; set; } = [];
+
+    /// <summary>
+    /// Beschreibungs-Updates für bestehende Entitäten.
+    /// Key-Format: "Correspondent:3", "DocumentType:2", "Tag:5", "StoragePath:1", "CustomField:4"
+    /// Value: neue Beschreibung (z.B. mit Aliases)
+    /// </summary>
+    public Dictionary<string, string> DescriptionUpdates { get; set; } = [];
+
     public string? Reasoning { get; set; }
     public string? SentSystemPrompt { get; set; }
     public string? SentUserPrompt { get; set; }
@@ -222,6 +245,7 @@ public class NewCustomFieldRequest
     public string Name { get; set; } = string.Empty;
     public string DataType { get; set; } = "string";
     public object? Value { get; set; }
+    public string? Description { get; set; }
 }
 
 public class ToolCallRecord

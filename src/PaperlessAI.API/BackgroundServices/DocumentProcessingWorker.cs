@@ -183,6 +183,7 @@ public class DocumentProcessingWorker(
         logger.LogInformation("AI Job #{Id}: Begründung: {Reason}", job.Id, result.Reasoning ?? "–");
 
         await ResolveNewEntitiesAsync(paperless, db, result, ct);
+        await ApplyDescriptionUpdatesAsync(db, result, ct);
         await ApplyAiResultAsync(paperless, doc, job.DocumentId, result, ct);
 
         await RemoveTagAsync(paperless, job.DocumentId, aiTagName, ct);
@@ -205,7 +206,7 @@ public class DocumentProcessingWorker(
             {
                 var created = await paperless.CreateCorrespondentAsync(result.NewCorrespondent, ct);
                 result.CorrespondentId = created.Id;
-                await SyncNewEntryAsync(db, EntityType.Correspondent, created.Id, created.Name, ct);
+                await SyncNewEntryAsync(db, EntityType.Correspondent, created.Id, created.Name, result.NewCorrespondentDescription, ct);
                 logger.LogInformation("KI hat neuen Korrespondenten angelegt: '{Name}' (id={Id})", created.Name, created.Id);
             }
             else logger.LogWarning("KI wollte neuen Korrespondenten '{Name}' anlegen – Berechtigung fehlt", result.NewCorrespondent);
@@ -218,20 +219,26 @@ public class DocumentProcessingWorker(
             {
                 var created = await paperless.CreateDocumentTypeAsync(result.NewDocumentType, ct);
                 result.DocumentTypeId = created.Id;
-                await SyncNewEntryAsync(db, EntityType.DocumentType, created.Id, created.Name, ct);
+                await SyncNewEntryAsync(db, EntityType.DocumentType, created.Id, created.Name, result.NewDocumentTypeDescription, ct);
                 logger.LogInformation("KI hat neuen Dokumenttyp angelegt: '{Name}' (id={Id})", created.Name, created.Id);
             }
             else logger.LogWarning("KI wollte neuen Dokumenttyp '{Name}' anlegen – Berechtigung fehlt", result.NewDocumentType);
         }
 
         // Tags
-        foreach (var tagName in (result.NewTags ?? []).Where(t => !string.IsNullOrWhiteSpace(t)))
+        var newTags = result.NewTags ?? [];
+        var newTagDescs = result.NewTagDescriptions ?? [];
+        for (var i = 0; i < newTags.Count; i++)
         {
+            var tagName = newTags[i];
+            if (string.IsNullOrWhiteSpace(tagName)) continue;
+            var tagDesc = i < newTagDescs.Count ? newTagDescs[i] : null;
+
             if (settings.Get(OpenAIService.CanCreateTagKey).IsTrue())
             {
                 var created = await paperless.CreateTagAsync(tagName, "#607D8B", ct);
                 result.TagIds.Add(created.Id);
-                await SyncNewEntryAsync(db, EntityType.Tag, created.Id, created.Name, ct);
+                await SyncNewEntryAsync(db, EntityType.Tag, created.Id, created.Name, tagDesc, ct);
                 logger.LogInformation("KI hat neuen Tag angelegt: '{Name}' (id={Id})", created.Name, created.Id);
             }
             else
@@ -248,7 +255,7 @@ public class DocumentProcessingWorker(
             {
                 var created = await paperless.CreateStoragePathAsync(result.NewStoragePath, ct);
                 result.StoragePathId = created.Id;
-                await SyncNewEntryAsync(db, EntityType.StoragePath, created.Id, created.Name, ct);
+                await SyncNewEntryAsync(db, EntityType.StoragePath, created.Id, created.Name, result.NewStoragePathDescription, ct);
                 logger.LogInformation("KI hat neuen Speicherpfad angelegt: '{Name}' (id={Id})", created.Name, created.Id);
             }
             else logger.LogWarning("KI wollte neuen Speicherpfad '{Name}' anlegen – Berechtigung fehlt", result.NewStoragePath);
@@ -268,7 +275,7 @@ public class DocumentProcessingWorker(
                 var fieldIdStr = created.Id.ToString();
                 if (!result.CustomFields.ContainsKey(fieldIdStr))
                     result.CustomFields[fieldIdStr] = req.Value;
-                await SyncNewEntryAsync(db, EntityType.CustomField, created.Id, created.Name, ct);
+                await SyncNewEntryAsync(db, EntityType.CustomField, created.Id, created.Name, req.Description, ct);
                 logger.LogInformation("KI hat neues Custom Field angelegt: '{Name}' (id={Id}, type={Type})",
                     created.Name, created.Id, dataType);
             }
@@ -277,20 +284,71 @@ public class DocumentProcessingWorker(
     }
 
     private static async Task SyncNewEntryAsync(
-        AppDbContext db, EntityType type, int entityId, string name, CancellationToken ct)
+        AppDbContext db, EntityType type, int entityId, string name, string? description, CancellationToken ct)
     {
         var existing = await db.MetadataDescriptions
             .FirstOrDefaultAsync(d => d.EntityType == type && d.EntityId == entityId, ct);
-        if (existing is not null) return;
 
-        db.MetadataDescriptions.Add(new Models.Domain.MetadataDescription
+        if (existing is null)
         {
-            EntityType = type,
-            EntityId = entityId,
-            Name = name,
-            Description = string.Empty,
-            UpdatedAt = DateTime.UtcNow
-        });
+            db.MetadataDescriptions.Add(new Models.Domain.MetadataDescription
+            {
+                EntityType = type,
+                EntityId = entityId,
+                Name = name,
+                Description = description ?? string.Empty,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+        else if (!string.IsNullOrWhiteSpace(description) && existing.Description != description)
+        {
+            existing.Description = description;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task ApplyDescriptionUpdatesAsync(
+        AppDbContext db, DocumentProcessingResult result, CancellationToken ct)
+    {
+        var updates = result.DescriptionUpdates ?? [];
+        if (updates.Count == 0) return;
+
+        foreach (var (key, description) in updates)
+        {
+            if (string.IsNullOrWhiteSpace(description)) continue;
+
+            var parts = key.Split(':', 2);
+            if (parts.Length != 2 || !int.TryParse(parts[1], out var entityId)) continue;
+
+            var entityType = parts[0] switch
+            {
+                "Correspondent" => (EntityType?)EntityType.Correspondent,
+                "DocumentType"  => EntityType.DocumentType,
+                "Tag"           => EntityType.Tag,
+                "StoragePath"   => EntityType.StoragePath,
+                "CustomField"   => EntityType.CustomField,
+                _ => null
+            };
+            if (entityType is null) continue;
+
+            var entry = await db.MetadataDescriptions
+                .FirstOrDefaultAsync(d => d.EntityType == entityType.Value && d.EntityId == entityId, ct);
+
+            if (entry is null)
+            {
+                logger.LogDebug("DescriptionUpdate: Kein Eintrag für {Key} – überspringe", key);
+                continue;
+            }
+
+            if (entry.Description == description) continue;
+
+            logger.LogInformation("DescriptionUpdate: {Key} → '{Desc}'", key, description[..Math.Min(80, description.Length)]);
+            entry.Description = description;
+            entry.UpdatedAt = DateTime.UtcNow;
+        }
+
         await db.SaveChangesAsync(ct);
     }
 
