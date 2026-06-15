@@ -1,0 +1,56 @@
+[
+  {
+    "name": "Arbeit und Beruf",
+    "path": "Arbeit und Beruf/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Dokumente vom Arbeitgeber oder zu beruflicher Qualifikation. Lohnabrechnung, Arbeitsvertrag, Zeugnis, Fortbildung. Absender ist typischerweise ein Unternehmen oder eine Bildungseinrichtung."
+  },
+  {
+    "name": "Fahrzeuge",
+    "path": "Fahrzeuge/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Dokumente zu privaten Kraftfahrzeugen. Fahrzeugschein, Kfz-Steuer, Werkstattrechnungen, TÜV, ADAC. Enthält häufig Kfz-Kennzeichen oder Fahrzeug-Identifikationsnummer."
+  },
+  {
+    "name": "Finanzen und Steuern",
+    "path": "Finanzen und Steuern/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Dokumente von Banken, Finanzamt oder zu Geldanlagen. Kontoauszug, Steuerbescheid, Steuererklärung, Kreditvertrag, Freistellungsauftrag. Absender ist Finanzamt, Bank oder Broker."
+  },
+  {
+    "name": "Gesundheit",
+    "path": "Gesundheit/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Dokumente von Krankenkasse, Ärzten oder Apotheken. Arztbrief, Krankenkassenbescheid, Rezept, Pflegeversicherung, Impfausweis. Absender ist eine medizinische Einrichtung oder Krankenkasse."
+  },
+  {
+    "name": "Persoenliche Dokumente",
+    "path": "Persoenliche Dokumente/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Amtliche Dokumente zur Identität und Vorsorge. Geburtsurkunde, Reisepass, Testament, Patientenverfügung, Vorsorgevollmacht. Ausgestellt von Behörden, Notaren oder Standesämtern. Selten mit Geldbeträgen."
+  },
+  {
+    "name": "Versicherungen",
+    "path": "Versicherungen/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Verträge und Schreiben von Versicherungsgesellschaften. Enthält Policennummer, Versicherungsart, Prämie und Deckungssumme. Absender ist eine Versicherungsgesellschaft, kein Arzt oder Arbeitgeber."
+  },
+  {
+    "name": "Wohnen",
+    "path": "Wohnen/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Dokumente zur Wohnsituation und Haushalt. Mietvertrag, Nebenkostenabrechnung, Strom, Gas, Internet, Kaufbelege für Elektrogeräte und Einrichtung. Absender ist Vermieter, Energieversorger oder Händler."
+  },
+  {
+    "name": "Freizeit und Reisen",
+    "path": "Freizeit und Reisen/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Dokumente zu Urlaub, Hobby und Freizeitaktivitäten. Hotelrechnung, Flugticket, Buchungsbestätigung, Vereinsmitgliedschaft, Fitnessstudio. Enthält häufig Reisedaten oder Veranstaltungsorte."
+  },
+  {
+    "name": "Sonstiges",
+    "path": "Sonstiges/{correspondent}/{created_year}-{created_month}-{created_day}_{title}",
+    "matching_algorithm": 0,
+    "description": "Dokument das keiner Hauptkategorie eindeutig zugeordnet werden kann. Kein Vertrag, keine Rechnung von Bank, Arzt, Arbeitgeber oder Versicherung. Temporärer Fallback — nur wenn nichts anderes passt."
+  }
+]

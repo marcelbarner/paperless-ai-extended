@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Betrag (EUR)",
+    "data_type": "monetary",
+    "description": "Gesamtbetrag einer Rechnung oder Zahlung in Euro. Ermöglicht Suche und Summenbildung über Rechnungen."
+  },
+  {
+    "name": "Fälligkeitsdatum",
+    "data_type": "date",
+    "description": "Datum bis zu dem eine Zahlung oder Aktion erforderlich ist. Anders als das Dokumentdatum (Erstellungsdatum)."
+  },
+  {
+    "name": "Vertragsnummer",
+    "data_type": "string",
+    "description": "Eindeutige Kennung des Vertrags oder Vorgangs beim Absender. Ermöglicht schnelles Zuordnen von Folgedokumenten."
+  },
+  {
+    "name": "Ablaufdatum",
+    "data_type": "date",
+    "description": "Datum an dem ein Vertrag, eine Garantie oder ein Dokument ausläuft. Nützlich für Kündigungsfristen und Verlängerungen."
+  },
+  {
+    "name": "Steuerjahr",
+    "data_type": "integer",
+    "description": "Vierstellige Jahreszahl für die steuerliche Zuordnung. Ermöglicht Filterung aller Belege eines Steuerjahres unabhängig vom Dokumentdatum."
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Offen",
+    "color": "#F59E0B",
+    "is_inbox_tag": false,
+    "description": "Dokument erfordert noch eine Aktion oder Zahlung."
+  },
+  {
+    "name": "Erledigt",
+    "color": "#10B981",
+    "is_inbox_tag": false,
+    "description": "Dokument wurde bearbeitet, bezahlt oder abgehakt."
+  },
+  {
+    "name": "Archiv",
+    "color": "#6B7280",
+    "is_inbox_tag": false,
+    "description": "Dokument wird nur zur Aufbewahrung behalten, keine Aktion nötig."
+  },
+  {
+    "name": "Wichtig",
+    "color": "#EF4444",
+    "is_inbox_tag": false,
+    "description": "Dokument ist besonders wichtig oder dringend."
+  },
+  {
+    "name": "Frist beachten",
+    "color": "#F97316",
+    "is_inbox_tag": false,
+    "description": "Dokument enthält eine Frist oder Kündigungsfrist die beachtet werden muss."
+  },
+  {
+    "name": "Original",
+    "color": "#8B5CF6",
+    "is_inbox_tag": false,
+    "description": "Das physische Original dieses Dokuments existiert noch und wird aufbewahrt."
+  },
+  {
+    "name": "Steuerrelevant",
+    "color": "#059669",
+    "is_inbox_tag": false,
+    "description": "Dokument ist für die Steuererklärung relevant und muss zum Jahresende berücksichtigt werden."
+  },
+  {
+    "name": "Steuerdokument",
+    "color": "#047857",
+    "is_inbox_tag": false,
+    "description": "Dokument belegt die Steuererklärung direkt, z.B. Lohnsteuerbescheinigung, Zinsbescheinigung, Rentenbescheid."
+  },
+  {
+    "name": "Werbungskosten",
+    "color": "#065F46",
+    "is_inbox_tag": false,
+    "description": "Ausgabe die als Werbungskosten in der Steuererklärung abgesetzt werden kann."
+  },
+  {
+    "name": "Haushaltsnahe Leistung",
+    "color": "#064E3B",
+    "is_inbox_tag": false,
+    "description": "Rechnung für haushaltsnahe Dienstleistungen oder Handwerkerleistungen, steuerlich absetzbar."
+  },
+  {
+    "name": "Wiederkehrend",
+    "color": "#3B82F6",
+    "is_inbox_tag": false,
+    "description": "Dokument kommt regelmäßig (monatlich, jährlich), z.B. Stromrechnung oder Lohnabrechnung."
+  },
+  {
+    "name": "Verschickt",
+    "color": "#6366F1",
+    "is_inbox_tag": false,
+    "description": "Dokument wurde per Post oder E-Mail versendet."
+  },
+  {
+    "name": "Eingang",
+    "color": "#0EA5E9",
+    "is_inbox_tag": false,
+    "description": "Dokument wurde empfangen, nicht selbst erstellt."
+  },
+  {
+    "name": "Digitales Original",
+    "color": "#7C3AED",
+    "is_inbox_tag": false,
+    "description": "Dokument existiert nur digital, es gibt kein physisches Original."
+  },
+  {
+    "name": "Einzusortieren",
+    "color": "#DC2626",
+    "is_inbox_tag": true,
+    "description": "Dokument liegt in Sonstiges und muss noch einem passenden Ordner zugeordnet werden."
+  }
+]

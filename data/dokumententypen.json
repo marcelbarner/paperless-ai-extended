@@ -1,0 +1,79 @@
+[
+  {
+    "name": "Rechnung",
+    "match": "Rechnung Betrag zahlbar fällig Rechnungsnummer",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Dokument mit Gesamtbetrag, Rechnungsnummer und Zahlungsziel. Enthält Absender/Empfänger und itemisierte Positionen. Erscheint monatlich oder anlassbezogen. Nicht zu verwechseln mit der jährlichen Lohnsteuerbescheinigung."
+  },
+  {
+    "name": "Vertrag",
+    "match": "Vertrag Vereinbarung Laufzeit Kündigung AGB",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Mehrseitige Vereinbarung mit Vertragsparteien, Laufzeit und Unterschrift. Oft mit AGB. Keine Zahlung im Dokument selbst."
+  },
+  {
+    "name": "Lohnabrechnung",
+    "match": "Lohnabrechnung Gehaltsabrechnung Brutto Netto Sozialversicherung",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Monatliches Dokument vom Arbeitgeber mit Brutto-/Netto-Beträgen, Steuer- und Sozialversicherungsabzügen. Erscheint monatlich. Nicht zu verwechseln mit der jährlichen Lohnsteuerbescheinigung."
+  },
+  {
+    "name": "Lohnsteuerbescheinigung",
+    "match": "Lohnsteuerbescheinigung Steueridentifikationsnummer Arbeitgeber Kalenderjahr",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Jährliches Dokument vom Arbeitgeber mit Zusammenfassung der gezahlten Löhne, einbehaltenen Steuern und Sozialversicherungsbeiträge des Kalenderjahres. Enthält Steueridentifikationsnummer und Steuernummer. Erscheint einmal pro Jahr, nicht monatlich."
+  },
+  {
+    "name": "Bescheid",
+    "match": "Bescheid Rechtsmittelbelehrung Festsetzung Behörde",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Hoheitliches Schreiben von Behörde oder Versicherung mit Bescheidformel und ggf. Rechtsmittelbelehrung. Beispiele: Steuerbescheid, Rentenbescheid, Krankenkassenbescheid."
+  },
+  {
+    "name": "Zeugnis / Urkunde",
+    "match": "Zeugnis Urkunde Zertifikat Diplom Bescheinigung",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Offizielles Dokument mit Siegel oder Stempel. Bestätigt Qualifikation, Identität oder Ereignis. Selten mit Geldbeträgen. Ausgestellt von Behörden, Schulen, Notaren oder Standesämtern."
+  },
+  {
+    "name": "Kontoauszug",
+    "match": "Kontoauszug IBAN Kontonummer Saldo Buchung",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Regelmäßiges Dokument der Bank mit Transaktionsliste, Datum, Kontonummer und Saldo. Kein Absender-Briefkopf wie bei Rechnungen."
+  },
+  {
+    "name": "Versicherungspolice",
+    "match": "Police Policennummer Versicherungsschein Deckungssumme Prämie",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Dokument einer Versicherung mit Policennummer, versichertem Objekt, Deckungssumme und Prämie. Oft mehrere Seiten mit AGB."
+  },
+  {
+    "name": "Reisebeleg",
+    "match": "Hotel Buchungsbestätigung Flug Reisedatum Check-in",
+    "matching_algorithm": 6,
+    "is_insensitive": true,
+    "document_ai_description": "Rechnung oder Buchungsbestätigung im Zusammenhang mit Reisen. Enthält Unterkunft, Reisedatum und Reiseziel."
+  },
+  {
+    "name": "Korrespondenz",
+    "match": "",
+    "matching_algorithm": 0,
+    "is_insensitive": true,
+    "document_ai_description": "Allgemeiner Brief oder E-Mail-Ausdruck ohne eindeutige Kategorie. Fallback für Schreiben die nicht besser zugeordnet werden können."
+  },
+  {
+    "name": "Sonstiges",
+    "match": "",
+    "matching_algorithm": 0,
+    "is_insensitive": true,
+    "document_ai_description": "Dokument das keiner der Hauptkategorien eindeutig zugeordnet werden kann. Kein Vertrag, keine Rechnung, kein Bescheid, keine Lohnabrechnung. Wird als temporärer Fallback verwendet."
+  }
+]
