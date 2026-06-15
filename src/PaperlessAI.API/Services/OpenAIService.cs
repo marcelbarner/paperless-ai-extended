@@ -13,6 +13,7 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
     public const string CanCreateDocumentTypeKey = "AI:CanCreate:DocumentType";
     public const string CanCreateTagKey = "AI:CanCreate:Tag";
     public const string CanCreateStoragePathKey = "AI:CanCreate:StoragePath";
+    public const string CanCreateCustomFieldKey = "AI:CanCreate:CustomField";
 
     private const int MaxToolRounds = 5;
 
@@ -38,6 +39,7 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
         5. Passende Tags (tag_ids als Array) – oder neue vorschlagen (new_tags) wenn erlaubt
         6. Den passenden Speicherpfad (storage_path_id) – oder einen neuen vorschlagen (new_storage_path) wenn erlaubt
         7. Werte für Custom Fields (custom_fields als Objekt mit Feld-ID als Schlüssel)
+        8. Neue Custom Fields anlegen (new_custom_fields) wenn erlaubt – mit Name, Datentyp und Wert
 
         Nutze 'search_documents' um ähnliche Dokumente zu finden und Konsistenz zu gewährleisten.
 
@@ -60,9 +62,11 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
           "storage_path_id": null,
           "new_storage_path": null,
           "custom_fields": {},
+          "new_custom_fields": [],
           "reasoning": "Kurze Begründung"
         }
         Setze new_* Felder nur wenn in der Sektion 'Anlegen-Berechtigungen' als erlaubt markiert und kein passender Eintrag in der Liste vorhanden ist.
+        new_custom_fields ist ein Array von Objekten: {"name": "Feldname", "data_type": "string|url|date|boolean|integer|float|monetary", "value": "Wert"}
         """;
 
     public bool CanCreate(string key) =>
@@ -206,10 +210,18 @@ public class DocumentProcessingResult
     public int? StoragePathId { get; set; }
     public string? NewStoragePath { get; set; }
     public Dictionary<string, object?> CustomFields { get; set; } = [];
+    public List<NewCustomFieldRequest> NewCustomFields { get; set; } = [];
     public string? Reasoning { get; set; }
     public string? SentSystemPrompt { get; set; }
     public string? SentUserPrompt { get; set; }
     public List<ToolCallRecord> ToolCalls { get; set; } = [];
+}
+
+public class NewCustomFieldRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string DataType { get; set; } = "string";
+    public object? Value { get; set; }
 }
 
 public class ToolCallRecord

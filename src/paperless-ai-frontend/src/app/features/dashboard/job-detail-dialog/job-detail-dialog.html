@@ -149,6 +149,15 @@
           <td>{{ formatValue(entry[1]) }}</td>
         </tr>
       }
+      @for (cf of aiResult.newCustomFields ?? []; track cf.name) {
+        <tr>
+          <td class="label">Custom Field</td>
+          <td>
+            <span class="new-badge"><mat-icon>add_circle</mat-icon> Neu: {{ cf.name }}</span>
+            <span class="cf-meta"> ({{ cf.dataType }}) = {{ formatValue(cf.value) }}</span>
+          </td>
+        </tr>
+      }
     </table>
   }
 

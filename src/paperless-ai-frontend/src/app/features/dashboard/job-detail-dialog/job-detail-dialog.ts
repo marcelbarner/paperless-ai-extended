@@ -40,6 +40,7 @@ interface AiResult {
   storagePathId: number | null;
   newStoragePath: string | null;
   customFields: Record<string, unknown>;
+  newCustomFields: { name: string; dataType: string; value: unknown }[];
   reasoning: string | null;
   sentSystemPrompt: string | null;
   sentUserPrompt: string | null;

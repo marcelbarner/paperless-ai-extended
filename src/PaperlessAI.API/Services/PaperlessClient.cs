@@ -167,6 +167,10 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
         => await PostCreateAsync<PaperlessStoragePath>("storage_paths/",
             new { name, path = name }, ct);
 
+    public async Task<PaperlessCustomField> CreateCustomFieldAsync(string name, string dataType, CancellationToken ct = default)
+        => await PostCreateAsync<PaperlessCustomField>("custom_fields/",
+            new { name, data_type = dataType }, ct);
+
     private async Task<T> PostCreateAsync<T>(string endpoint, object body, CancellationToken ct)
     {
         // Explizite Serialisierung ohne Naming-Policy damit Feldnamen wie "name" korrekt bleiben

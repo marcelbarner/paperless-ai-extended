@@ -30,7 +30,8 @@ public class SettingsController(AppDbContext db) : ControllerBase
         OpenAIService.CanCreateCorrespondentKey,
         OpenAIService.CanCreateDocumentTypeKey,
         OpenAIService.CanCreateTagKey,
-        OpenAIService.CanCreateStoragePathKey
+        OpenAIService.CanCreateStoragePathKey,
+        OpenAIService.CanCreateCustomFieldKey
     ];
 
     [HttpGet]
@@ -60,7 +61,8 @@ public class SettingsController(AppDbContext db) : ControllerBase
             OpenAIService.CanCreateCorrespondentKey,
             OpenAIService.CanCreateDocumentTypeKey,
             OpenAIService.CanCreateTagKey,
-            OpenAIService.CanCreateStoragePathKey
+            OpenAIService.CanCreateStoragePathKey,
+            OpenAIService.CanCreateCustomFieldKey
         })
         {
             if (string.IsNullOrEmpty(result[key])) result[key] = "false";

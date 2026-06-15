@@ -253,6 +253,27 @@ public class DocumentProcessingWorker(
             }
             else logger.LogWarning("KI wollte neuen Speicherpfad '{Name}' anlegen – Berechtigung fehlt", result.NewStoragePath);
         }
+
+        // Custom Fields
+        foreach (var req in (result.NewCustomFields ?? []).Where(r => !string.IsNullOrWhiteSpace(r.Name)))
+        {
+            if (settings.Get(OpenAIService.CanCreateCustomFieldKey).IsTrue())
+            {
+                var dataType = req.DataType?.ToLowerInvariant() switch
+                {
+                    "integer" or "float" or "monetary" or "date" or "boolean" or "url" or "documentlink" => req.DataType.ToLowerInvariant(),
+                    _ => "string"
+                };
+                var created = await paperless.CreateCustomFieldAsync(req.Name, dataType, ct);
+                var fieldIdStr = created.Id.ToString();
+                if (!result.CustomFields.ContainsKey(fieldIdStr))
+                    result.CustomFields[fieldIdStr] = req.Value;
+                await SyncNewEntryAsync(db, EntityType.CustomField, created.Id, created.Name, ct);
+                logger.LogInformation("KI hat neues Custom Field angelegt: '{Name}' (id={Id}, type={Type})",
+                    created.Name, created.Id, dataType);
+            }
+            else logger.LogWarning("KI wollte neues Custom Field '{Name}' anlegen – Berechtigung fehlt", req.Name);
+        }
     }
 
     private static async Task SyncNewEntryAsync(

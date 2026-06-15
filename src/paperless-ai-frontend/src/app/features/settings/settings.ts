@@ -83,6 +83,11 @@ const TOGGLE_FIELDS: SettingField[] = [
     key: 'AI:CanCreate:StoragePath',
     label: 'Speicherpfade anlegen',
     hint: 'KI darf neue Speicherpfade in Paperless erstellen'
+  },
+  {
+    key: 'AI:CanCreate:CustomField',
+    label: 'Custom Fields anlegen',
+    hint: 'KI darf neue benutzerdefinierte Felder anlegen (Name + Datentyp + Wert)'
   }
 ];
 

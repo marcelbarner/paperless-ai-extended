@@ -109,6 +109,7 @@ public class MetadataContextBuilder(
         bool canDocType = IsEnabled(OpenAIService.CanCreateDocumentTypeKey);
         bool canTag = IsEnabled(OpenAIService.CanCreateTagKey);
         bool canPath = IsEnabled(OpenAIService.CanCreateStoragePathKey);
+        bool canCustomField = IsEnabled(OpenAIService.CanCreateCustomFieldKey);
 
         var allowed = new List<string>();
         var forbidden = new List<string>();
@@ -117,6 +118,9 @@ public class MetadataContextBuilder(
         Check(canDocType, "Dokumenttypen (new_document_type = \"Name\")", "Dokumenttypen", allowed, forbidden);
         Check(canTag, "Tags (new_tags = [\"Name1\", \"Name2\"])", "Tags", allowed, forbidden);
         Check(canPath, "Speicherpfade (new_storage_path = \"Name\")", "Speicherpfade", allowed, forbidden);
+        Check(canCustomField,
+            "Custom Fields (new_custom_fields = [{\"name\":\"Feldname\",\"data_type\":\"string\",\"value\":\"Wert\"}])",
+            "Custom Fields", allowed, forbidden);
 
         if (allowed.Count == 0 && forbidden.Count == 0) return;
 
@@ -132,6 +136,19 @@ public class MetadataContextBuilder(
         {
             sb.AppendLine("Folgendes darfst du NICHT neu anlegen – setze new_* auf null und wähle nur aus der Liste:");
             foreach (var f in forbidden) sb.AppendLine($"- {f}");
+        }
+
+        if (canCustomField)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Verfügbare Datentypen für neue Custom Fields:");
+            sb.AppendLine("- string: Text (z.B. Rechnungsnummer, Vertragsnummer)");
+            sb.AppendLine("- integer: Ganzzahl (z.B. Seitenzahl, Bestellnummer)");
+            sb.AppendLine("- float: Dezimalzahl (z.B. Betrag ohne Währung)");
+            sb.AppendLine("- monetary: Geldbetrag mit Währung (z.B. 1500.00)");
+            sb.AppendLine("- date: Datum (Format YYYY-MM-DD, z.B. Fälligkeitsdatum)");
+            sb.AppendLine("- boolean: Ja/Nein (true/false)");
+            sb.AppendLine("- url: Web-Adresse");
         }
 
         sb.AppendLine();
