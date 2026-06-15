@@ -17,6 +17,7 @@ public class SettingsController(AppDbContext db) : ControllerBase
         "Paperless:Token",
         PaperlessPollingService.OcrTagKey,
         PaperlessPollingService.AiTagKey,
+        PaperlessPollingService.ErrorTagKey,
         "Azure:DocumentIntelligence:Endpoint",
         DocumentIntelligenceService.OutputFormatKey,
         DocumentIntelligenceService.ModelKey,
@@ -50,6 +51,8 @@ public class SettingsController(AppDbContext db) : ControllerBase
             result[PaperlessPollingService.OcrTagKey] = PaperlessPollingService.DefaultOcrTagName;
         if (string.IsNullOrEmpty(result[PaperlessPollingService.AiTagKey]))
             result[PaperlessPollingService.AiTagKey] = PaperlessPollingService.DefaultAiTagName;
+        if (string.IsNullOrEmpty(result[PaperlessPollingService.ErrorTagKey]))
+            result[PaperlessPollingService.ErrorTagKey] = PaperlessPollingService.DefaultErrorTagName;
         if (string.IsNullOrEmpty(result[DocumentIntelligenceService.OutputFormatKey]))
             result[DocumentIntelligenceService.OutputFormatKey] = "text";
         if (string.IsNullOrEmpty(result[DocumentIntelligenceService.ModelKey]))

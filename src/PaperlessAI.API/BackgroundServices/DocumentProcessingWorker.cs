@@ -90,6 +90,7 @@ public class DocumentProcessingWorker(
         {
             logger.LogError(ex, "Job #{Id} fehlgeschlagen", job.Id);
             await SetStatus(db, job.Id, JobStatus.Failed, ct, error: BuildErrorMessage(ex));
+            await HandleFailureTagsAsync(paperless, job, ct);
         }
     }
 
@@ -397,6 +398,47 @@ public class DocumentProcessingWorker(
         else
         {
             logger.LogInformation("ApplyAI: Keine Felder zum Aktualisieren");
+        }
+    }
+
+    private async Task HandleFailureTagsAsync(
+        PaperlessClient paperless, ProcessingJob job, CancellationToken ct)
+    {
+        try
+        {
+            var doc = await paperless.GetDocumentAsync(job.DocumentId, ct);
+            if (doc is null) return;
+
+            var ocrTagName = settings.Get(PaperlessPollingService.OcrTagKey) ?? PaperlessPollingService.DefaultOcrTagName;
+            var aiTagName = settings.Get(PaperlessPollingService.AiTagKey) ?? PaperlessPollingService.DefaultAiTagName;
+            var errorTagName = settings.Get(PaperlessPollingService.ErrorTagKey) ?? PaperlessPollingService.DefaultErrorTagName;
+
+            // Automation-Tags auflösen
+            var ocrTag = await paperless.GetTagByNameAsync(ocrTagName, ct);
+            var aiTag = await paperless.GetTagByNameAsync(aiTagName, ct);
+            var errorTag = await paperless.GetTagByNameAsync(errorTagName, ct);
+
+            // Tags berechnen: Automation-Tags entfernen, Error-Tag hinzufügen
+            var tagsToRemove = new HashSet<int>();
+            if (ocrTag is not null) tagsToRemove.Add(ocrTag.Id);
+            if (aiTag is not null) tagsToRemove.Add(aiTag.Id);
+
+            var updatedTags = doc.Tags
+                .Where(id => !tagsToRemove.Contains(id))
+                .ToList();
+
+            if (errorTag is not null && !updatedTags.Contains(errorTag.Id))
+                updatedTags.Add(errorTag.Id);
+
+            await paperless.UpdateDocumentAsync(job.DocumentId, new { tags = updatedTags }, ct);
+
+            logger.LogInformation(
+                "Job #{Id} fehlgeschlagen – Automation-Tags entfernt, Fehler-Tag '{Tag}' gesetzt (DocId={DocId})",
+                job.Id, errorTagName, job.DocumentId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fehler beim Setzen des Fehler-Tags für Job #{Id}", job.Id);
         }
     }
 

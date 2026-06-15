@@ -14,8 +14,12 @@ public class PaperlessPollingService(
 {
     public const string OcrTagKey = "Paperless:OcrTagName";
     public const string AiTagKey = "Paperless:AiTagName";
+    public const string ErrorTagKey = "Paperless:ErrorTagName";
     public const string DefaultOcrTagName = "paperless-ai-ocr";
     public const string DefaultAiTagName = "paperless-ai-process";
+    public const string DefaultErrorTagName = "paperless-ai-error";
+
+    private string ErrorTagName => settings.Get(ErrorTagKey) ?? DefaultErrorTagName;
 
     private string OcrTagName => settings.Get(OcrTagKey) ?? DefaultOcrTagName;
     private string AiTagName => settings.Get(AiTagKey) ?? DefaultAiTagName;
@@ -66,10 +70,20 @@ public class PaperlessPollingService(
         var documents = await paperless.GetDocumentsWithTagsAsync(tagNamesToSearch, ct);
         logger.LogDebug("Poll: {Count} Dokument(e) mit Verarbeitungs-Tags gefunden", documents.Count);
 
+        // Fehler-Tag-ID für Ausschluss
+        var errorTag = await paperless.GetTagByNameAsync(ErrorTagName, ct);
+
         foreach (var doc in documents)
         {
             var hasOcr = ocrTag is not null && doc.Tags.Contains(ocrTag.Id);
             var hasAi = aiTag is not null && doc.Tags.Contains(aiTag.Id);
+
+            // Dokumente mit Fehler-Tag überspringen
+            if (errorTag is not null && doc.Tags.Contains(errorTag.Id))
+            {
+                logger.LogDebug("Dokument {DocId} hat Fehler-Tag – wird übersprungen", doc.Id);
+                continue;
+            }
 
             // OCR-Job anlegen wenn OCR-Tag vorhanden und noch kein aktiver OCR-Job
             if (hasOcr)
@@ -142,9 +156,10 @@ public class PaperlessPollingService(
 
         await EnsureTagAsync(paperless, OcrTagName, "#1565C0", ct);
         await EnsureTagAsync(paperless, AiTagName, "#2E7D32", ct);
+        await EnsureTagAsync(paperless, ErrorTagName, "#C62828", ct);
 
-        logger.LogInformation("Polling gestartet – OCR-Tag: '{Ocr}', AI-Tag: '{Ai}'",
-            OcrTagName, AiTagName);
+        logger.LogInformation("Polling gestartet – OCR-Tag: '{Ocr}', AI-Tag: '{Ai}', Fehler-Tag: '{Err}'",
+            OcrTagName, AiTagName, ErrorTagName);
     }
 
     private async Task EnsureTagAsync(PaperlessClient client, string name, string color, CancellationToken ct)
