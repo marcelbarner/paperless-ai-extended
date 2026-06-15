@@ -70,7 +70,10 @@ export class MetadataListComponent implements OnInit {
     this.syncing.set(true);
     this.api.syncMetadata(this.type()).subscribe(res => {
       this.syncing.set(false);
-      this.snack.open(`${res.synced} Einträge synchronisiert`, 'OK', { duration: 3000 });
+      const msg = res.removed
+        ? `${res.synced} synchronisiert, ${res.removed} gelöschte Einträge entfernt`
+        : `${res.synced} Einträge synchronisiert`;
+      this.snack.open(msg, 'OK', { duration: 4000 });
       this.load();
     });
   }

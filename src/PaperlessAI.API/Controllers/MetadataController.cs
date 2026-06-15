@@ -9,7 +9,7 @@ namespace PaperlessAI.API.Controllers;
 
 [ApiController]
 [Route("api/metadata/{type}")]
-public class MetadataController(AppDbContext db, PaperlessClient paperless) : ControllerBase
+public class MetadataController(AppDbContext db, PaperlessClient paperless, ILogger<MetadataController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(string type, CancellationToken ct)
@@ -59,10 +59,13 @@ public class MetadataController(AppDbContext db, PaperlessClient paperless) : Co
         if (entityType is null) return BadRequest("Unknown type");
 
         var items = await FetchFromPaperlessAsync(entityType.Value, ct);
+        var liveIds = items.Select(i => i.Id).ToHashSet();
+
         var existing = await db.MetadataDescriptions
             .Where(d => d.EntityType == entityType.Value)
             .ToDictionaryAsync(d => d.EntityId, ct);
 
+        // Neue hinzufügen / Namen aktualisieren
         foreach (var (id, name) in items)
         {
             if (!existing.TryGetValue(id, out var desc))
@@ -83,8 +86,17 @@ public class MetadataController(AppDbContext db, PaperlessClient paperless) : Co
             }
         }
 
+        // Verwaiste Einträge entfernen (in Paperless gelöscht)
+        var orphans = existing.Values.Where(d => !liveIds.Contains(d.EntityId)).ToList();
+        if (orphans.Count > 0)
+        {
+            db.MetadataDescriptions.RemoveRange(orphans);
+            logger.LogInformation("Sync {Type}: {Count} verwaiste Beschreibung(en) entfernt (in Paperless gelöscht)",
+                type, orphans.Count);
+        }
+
         await db.SaveChangesAsync(ct);
-        return Ok(new { synced = items.Count });
+        return Ok(new { synced = items.Count, removed = orphans.Count });
     }
 
     private async Task<List<(int Id, string Name)>> FetchFromPaperlessAsync(EntityType type, CancellationToken ct)

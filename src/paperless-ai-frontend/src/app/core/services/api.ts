@@ -82,8 +82,8 @@ export class ApiService {
     );
   }
 
-  syncMetadata(type: MetadataType): Observable<{ synced: number }> {
-    return this.http.post<{ synced: number }>(`${this.base}/metadata/${type}/sync`, null);
+  syncMetadata(type: MetadataType): Observable<{ synced: number; removed: number }> {
+    return this.http.post<{ synced: number; removed: number }>(`${this.base}/metadata/${type}/sync`, null);
   }
 
   getSettings(): Observable<Record<string, string>> {
