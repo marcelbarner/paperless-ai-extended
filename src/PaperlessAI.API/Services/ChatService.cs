@@ -659,7 +659,7 @@ public class ChatService(
 
         ChatTool.CreateFunctionTool("propose_retry_jobs",
             "Schlägt vor, fehlgeschlagene Jobs neu zu starten. Braucht Genehmigung.",
-            BinaryData.FromString("""{"type":"object","properties":{"all_failed":{"type":"boolean","description":"Alle fehlgeschlagenen Jobs neustarten"},"job_ids":{"type":"array","items":{"type":"integer"},"description":"Spezifische Job-IDs"}}}}"""))
+            BinaryData.FromString("""{"type":"object","properties":{"all_failed":{"type":"boolean","description":"Alle fehlgeschlagenen Jobs neustarten"},"job_ids":{"type":"array","items":{"type":"integer"},"description":"Spezifische Job-IDs"}}}"""))
     ];
 }
 
