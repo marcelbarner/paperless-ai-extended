@@ -140,7 +140,7 @@ public class ChatService(
     {
         var type = args.GetStringProp("type");
         var entities = await FetchEntitiesAsync(type, ct);
-        return JsonSerializer.Serialize(entities);
+        return JsonSerializer.Serialize(entities.Select(e => new { id = e.Id, name = e.Name }));
     }
 
     private async Task<string> FindWithoutDescriptionAsync(JsonElement args, CancellationToken ct)
@@ -157,7 +157,9 @@ public class ChatService(
                 .ToHashSet()
             : new HashSet<int>();
 
-        var missing = entities.Where(e => !withDesc.Contains(e.Id)).ToList();
+        var missing = entities.Where(e => !withDesc.Contains(e.Id))
+            .Select(e => new { id = e.Id, name = e.Name })
+            .ToList();
         return JsonSerializer.Serialize(missing);
     }
 
@@ -169,7 +171,7 @@ public class ChatService(
         var groups = entities
             .GroupBy(e => Normalize(e.Name))
             .Where(g => g.Count() > 1)
-            .Select(g => new { normalized = g.Key, items = g.ToList() })
+            .Select(g => new { normalized = g.Key, items = g.Select(e => new { id = e.Id, name = e.Name }).ToList() })
             .ToList();
 
         return groups.Count == 0
