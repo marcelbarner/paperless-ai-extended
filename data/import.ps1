@@ -16,7 +16,8 @@
 param(
     [Parameter(Mandatory)] [string] $PaperlessUrl,
     [Parameter(Mandatory)] [string] $PaperlessToken,
-    [Parameter(Mandatory)] [string] $AppUrl
+    [Parameter(Mandatory)] [string] $AppUrl,
+    [switch] $AppOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -77,6 +78,58 @@ Write-Host " PaperlessAI - Daten-Import" -ForegroundColor Cyan
 Write-Host " Paperless: $PaperlessUrl" -ForegroundColor Cyan
 Write-Host " App:       $AppUrl" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
+
+if ($AppOnly) {
+    Write-Host ""
+    Write-Host "[ App-Einstellungen ]" -ForegroundColor Yellow
+    try {
+        Invoke-App PUT "settings" @{
+            'Paperless:BaseUrl' = $PaperlessUrl
+            'Paperless:Token'   = $PaperlessToken
+        } | Out-Null
+        Write-Ok "Paperless-URL und Token in App gespeichert"
+    } catch {
+        Write-Err "App-Einstellungen konnten nicht gespeichert werden (App läuft?)"
+    }
+
+    Write-Host ""
+    Write-Host "[ Beschreibungen synchronisieren ]" -ForegroundColor Yellow
+
+    $dokTypes = Get-Content (Join-Path $ScriptDir "dokumententypen.json") -Raw | ConvertFrom-Json
+    foreach ($dt in $dokTypes) {
+        $id = Find-ByName "document_types" $dt.name
+        if ($id) { Save-Description "document-types" $id $dt.name $dt.document_ai_description; Write-Ok "Dokumententyp: $($dt.name)" }
+        else      { Write-Skip "Dokumententyp nicht gefunden: $($dt.name)" }
+    }
+
+    $tags = Get-Content (Join-Path $ScriptDir "tags.json") -Raw | ConvertFrom-Json
+    foreach ($tag in $tags) {
+        $id = Find-ByName "tags" $tag.name
+        if ($id) { Save-Description "tags" $id $tag.name $tag.description; Write-Ok "Tag: $($tag.name)" }
+        else      { Write-Skip "Tag nicht gefunden: $($tag.name)" }
+    }
+
+    $allFields = Invoke-Paperless GET "custom_fields/?page_size=200"
+    $felder = Get-Content (Join-Path $ScriptDir "felder.json") -Raw | ConvertFrom-Json
+    foreach ($feld in $felder) {
+        $id = Find-InList $allFields.results $feld.name
+        if ($id) { Save-Description "custom-fields" $id $feld.name $feld.description; Write-Ok "Custom Field: $($feld.name)" }
+        else      { Write-Skip "Custom Field nicht gefunden: $($feld.name)" }
+    }
+
+    $pfade = Get-Content (Join-Path $ScriptDir "speicherpfade.json") -Raw | ConvertFrom-Json
+    foreach ($pfad in $pfade) {
+        $id = Find-ByName "storage_paths" $pfad.name
+        if ($id) { Save-Description "storage-paths" $id $pfad.name $pfad.description; Write-Ok "Speicherpfad: $($pfad.name)" }
+        else      { Write-Skip "Speicherpfad nicht gefunden: $($pfad.name)" }
+    }
+
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor Cyan
+    Write-Host " Fertig!" -ForegroundColor Green
+    Write-Host "============================================" -ForegroundColor Cyan
+    exit 0
+}
 
 # --- 1. Dokumententypen ---
 

@@ -36,13 +36,10 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
 
         while (url is not null)
         {
-            var page = await http.GetFromJsonAsync<PaperlessPagedResult<PaperlessDocument>>(
-                url, JsonOptions, ct);
+            var page = await GetJsonAsync<PaperlessPagedResult<PaperlessDocument>>(http, url, ct);
             if (page is null) break;
             result.AddRange(page.Results);
-            url = page.Next is not null
-                ? new Uri(page.Next).PathAndQuery.TrimStart('/')
-                : null;
+            url = page.Next is not null ? NextPageUrl(page.Next) : null;
         }
         return result;
     }
@@ -57,7 +54,8 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
             ? $"documents/?page_size={limit * 2}&ordering=-created"
             : $"documents/?search={Uri.EscapeDataString(search)}&page_size={limit * 2}&ordering=-created";
 
-        var page = await BuildClient().GetFromJsonAsync<PaperlessPagedResult<PaperlessDocument>>(url, JsonOptions, ct);
+        var http = BuildClient();
+        var page = await GetJsonAsync<PaperlessPagedResult<PaperlessDocument>>(http, url, ct);
         var docs = page?.Results ?? [];
 
         var excludeNames = new HashSet<string>(excludeTagNames, StringComparer.OrdinalIgnoreCase);
@@ -88,7 +86,8 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
         // Mehr laden als benötigt, damit nach dem Filtern noch genug übrig bleiben
         var fetchSize = limit * 3;
         var url = $"documents/?search={Uri.EscapeDataString(query)}&page_size={fetchSize}&ordering=-created";
-        var page = await BuildClient().GetFromJsonAsync<PaperlessPagedResult<PaperlessDocument>>(url, JsonOptions, ct);
+        var http2 = BuildClient();
+        var page = await GetJsonAsync<PaperlessPagedResult<PaperlessDocument>>(http2, url, ct);
         var docs = page?.Results ?? [];
 
         // Dokumente mit Automation-Tags herausfiltern (noch nicht verarbeitet)
@@ -120,7 +119,10 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
     }
 
     public async Task<PaperlessDocument?> GetDocumentAsync(int documentId, CancellationToken ct = default)
-        => await BuildClient().GetFromJsonAsync<PaperlessDocument>($"documents/{documentId}/", JsonOptions, ct);
+    {
+        var http = BuildClient();
+        return await GetJsonAsync<PaperlessDocument>(http, $"documents/{documentId}/", ct);
+    }
 
     public async Task UpdateDocumentAsync(int documentId, object patch, CancellationToken ct = default)
     {
@@ -146,8 +148,9 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
 
     public async Task<PaperlessTag?> GetTagByNameAsync(string name, CancellationToken ct = default)
     {
-        var page = await BuildClient().GetFromJsonAsync<PaperlessPagedResult<PaperlessTag>>(
-            $"tags/?name={Uri.EscapeDataString(name)}", JsonOptions, ct);
+        var http = BuildClient();
+        var page = await GetJsonAsync<PaperlessPagedResult<PaperlessTag>>(
+            http, $"tags/?name={Uri.EscapeDataString(name)}", ct);
         return page?.Results.FirstOrDefault(t =>
             string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
     }
@@ -213,13 +216,30 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
         string? url = endpoint + "?page_size=200";
         while (url is not null)
         {
-            var page = await http.GetFromJsonAsync<PaperlessPagedResult<T>>(url, JsonOptions, ct);
+            var page = await GetJsonAsync<PaperlessPagedResult<T>>(http, url, ct);
             if (page is null) break;
             result.AddRange(page.Results);
-            url = page.Next is not null
-                ? new Uri(page.Next).PathAndQuery.TrimStart('/')
-                : null;
+            url = page.Next is not null ? NextPageUrl(page.Next) : null;
         }
         return result;
+    }
+
+    private static string NextPageUrl(string next)
+    {
+        var path = new Uri(next).PathAndQuery.TrimStart('/');
+        return path.StartsWith("api/", StringComparison.OrdinalIgnoreCase) ? path[4..] : path;
+    }
+
+    private async Task<T?> GetJsonAsync<T>(HttpClient http, string url, CancellationToken ct)
+    {
+        var response = await http.GetAsync(url, ct);
+        var body = await response.Content.ReadAsStringAsync(ct);
+        if (!response.IsSuccessStatusCode || !body.TrimStart().StartsWith('{') && !body.TrimStart().StartsWith('['))
+        {
+            logger.LogError("GET {Url} → HTTP {Status} — Body: {Body}",
+                url, (int)response.StatusCode, body[..Math.Min(500, body.Length)]);
+            response.EnsureSuccessStatusCode();
+        }
+        return JsonSerializer.Deserialize<T>(body, JsonOptions);
     }
 }

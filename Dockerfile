@@ -1,8 +1,8 @@
 # ── Stage 1: Angular Frontend bauen ──────────────────────────
-FROM node:20-alpine AS frontend-build
+FROM node:24-alpine AS frontend-build
 WORKDIR /app
 COPY src/paperless-ai-frontend/package*.json ./
-RUN npm ci --silent
+RUN npm ci
 COPY src/paperless-ai-frontend/ ./
 RUN npx ng build --configuration production
 
