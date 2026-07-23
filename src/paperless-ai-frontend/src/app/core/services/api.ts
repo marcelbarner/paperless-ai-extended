@@ -141,6 +141,10 @@ export class ApiService {
   chat(history: ChatTurn[], message: string): Observable<ChatResponse> {
     return this.http.post<ChatResponse>(`${this.base}/chat/message`, { history, message });
   }
+
+  chatExecute(actions: PendingAction[]): Observable<ChatAction[]> {
+    return this.http.post<ChatAction[]>(`${this.base}/chat/execute`, { actions });
+  }
 }
 
 export interface PlaygroundDocument {
@@ -164,9 +168,17 @@ export interface ChatAction {
   error: string | null;
 }
 
+export interface PendingAction {
+  id: string;
+  type: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
 export interface ChatResponse {
   message: string;
-  actions: ChatAction[];
+  completedActions: ChatAction[];
+  pendingActions: PendingAction[];
 }
 
 export interface AiResult {

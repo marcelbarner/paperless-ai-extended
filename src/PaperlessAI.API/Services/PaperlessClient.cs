@@ -146,6 +146,37 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
         }
     }
 
+    public async Task<List<PaperlessDocument>> SearchDocumentsAdvancedAsync(
+        string? query,
+        int? correspondentId,
+        int? documentTypeId,
+        List<int>? tagIds,
+        int limit,
+        CancellationToken ct = default)
+    {
+        var parts = new List<string> { $"page_size={limit}", "ordering=-created" };
+        if (!string.IsNullOrWhiteSpace(query)) parts.Add($"search={Uri.EscapeDataString(query)}");
+        if (correspondentId.HasValue) parts.Add($"correspondent__id={correspondentId}");
+        if (documentTypeId.HasValue) parts.Add($"document_type__id={documentTypeId}");
+        if (tagIds?.Count > 0) parts.Add($"tags__id__all={string.Join(",", tagIds)}");
+
+        var http = BuildClient();
+        var page = await GetJsonAsync<PaperlessPagedResult<PaperlessDocument>>(
+            http, "documents/?" + string.Join("&", parts), ct);
+        return page?.Results ?? [];
+    }
+
+    public async Task DeleteEntityAsync(string endpoint, int id, CancellationToken ct = default)
+    {
+        var http = BuildClient();
+        var response = await http.DeleteAsync($"{endpoint}/{id}/", ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException($"{response.StatusCode} bei DELETE {endpoint}/{id}/ — {body[..Math.Min(300, body.Length)]}");
+        }
+    }
+
     public Task RenameCorrespondentAsync(int id, string name, CancellationToken ct = default)
         => PatchEntityAsync("correspondents", id, new { name }, ct);
 

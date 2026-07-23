@@ -13,4 +13,11 @@ public class ChatController(ChatService chat) : ControllerBase
         var response = await chat.SendMessageAsync(request.History, request.Message, ct);
         return Ok(response);
     }
+
+    [HttpPost("execute")]
+    public async Task<IActionResult> Execute([FromBody] ExecuteRequest request, CancellationToken ct)
+    {
+        var results = await chat.ExecuteApprovedActionsAsync(request.Actions, ct);
+        return Ok(results);
+    }
 }
