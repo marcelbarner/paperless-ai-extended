@@ -21,5 +21,10 @@ export const routes: Routes = [
     path: 'playground',
     loadComponent: () =>
       import('./features/playground/playground').then(m => m.PlaygroundComponent)
+  },
+  {
+    path: 'chat',
+    loadComponent: () =>
+      import('./features/chat/chat').then(m => m.ChatComponent)
   }
 ];

@@ -28,6 +28,7 @@ builder.Services.AddScoped<PaperlessClient>();
 builder.Services.AddSingleton<DocumentIntelligenceService>();
 builder.Services.AddSingleton<OpenAIService>();
 builder.Services.AddScoped<MetadataContextBuilder>();
+builder.Services.AddScoped<ChatService>();
 
 // Queue
 builder.Services.AddSingleton<DocumentProcessingChannel>();

@@ -137,6 +137,10 @@ export class ApiService {
     return this.http.post<void>(`${this.base}/playground/save-prompts`,
       { systemPrompt, userPromptTemplate });
   }
+
+  chat(history: ChatTurn[], message: string): Observable<ChatResponse> {
+    return this.http.post<ChatResponse>(`${this.base}/chat/message`, { history, message });
+  }
 }
 
 export interface PlaygroundDocument {
@@ -146,6 +150,23 @@ export interface PlaygroundDocument {
   correspondent_id: number | null;
   document_type_id: number | null;
   has_content: boolean;
+}
+
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatAction {
+  tool: string;
+  description: string;
+  success: boolean;
+  error: string | null;
+}
+
+export interface ChatResponse {
+  message: string;
+  actions: ChatAction[];
 }
 
 export interface AiResult {

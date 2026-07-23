@@ -146,6 +146,32 @@ public class PaperlessClient(IHttpClientFactory httpFactory, AppSettingsService 
         }
     }
 
+    public Task RenameCorrespondentAsync(int id, string name, CancellationToken ct = default)
+        => PatchEntityAsync("correspondents", id, new { name }, ct);
+
+    public Task RenameTagAsync(int id, string name, CancellationToken ct = default)
+        => PatchEntityAsync("tags", id, new { name }, ct);
+
+    public Task RenameDocumentTypeAsync(int id, string name, CancellationToken ct = default)
+        => PatchEntityAsync("document_types", id, new { name }, ct);
+
+    public Task RenameStoragePathAsync(int id, string name, CancellationToken ct = default)
+        => PatchEntityAsync("storage_paths", id, new { name }, ct);
+
+    private async Task PatchEntityAsync(string endpoint, int id, object patch, CancellationToken ct)
+    {
+        var http = BuildClient();
+        var json = JsonSerializer.Serialize(patch, JsonOptions);
+        var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(System.Net.Http.HttpMethod.Patch, $"{endpoint}/{id}/") { Content = content };
+        var response = await http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException($"{response.StatusCode} bei PATCH {endpoint}/{id}/ — {body[..Math.Min(300, body.Length)]}");
+        }
+    }
+
     public async Task<PaperlessTag?> GetTagByNameAsync(string name, CancellationToken ct = default)
     {
         var http = BuildClient();
