@@ -124,6 +124,9 @@ public class DocumentProcessingWorker(
         var ocrTagName = settings.Get(PaperlessPollingService.OcrTagKey) ?? PaperlessPollingService.DefaultOcrTagName;
         await RemoveTagAsync(paperless, job.DocumentId, ocrTagName, ct);
 
+        var errorTagName = settings.Get(PaperlessPollingService.ErrorTagKey) ?? PaperlessPollingService.DefaultErrorTagName;
+        await RemoveTagAsync(paperless, job.DocumentId, errorTagName, ct);
+
         var resultJson = JsonSerializer.Serialize(new OcrResult
         {
             CharCount = content.Length,
@@ -189,6 +192,9 @@ public class DocumentProcessingWorker(
 
         await RemoveTagAsync(paperless, job.DocumentId, aiTagName, ct);
         await AddReviewTagAsync(paperless, job.DocumentId, ct);
+
+        var errorTagName = settings.Get(PaperlessPollingService.ErrorTagKey) ?? PaperlessPollingService.DefaultErrorTagName;
+        await RemoveTagAsync(paperless, job.DocumentId, errorTagName, ct);
 
         var resultJson = JsonSerializer.Serialize(result, CamelCaseOptions);
         await SetStatus(db, job.Id, JobStatus.Done, ct, resultJson: resultJson);
@@ -440,17 +446,12 @@ public class DocumentProcessingWorker(
             var aiTag = await paperless.GetTagByNameAsync(aiTagName, ct);
             var errorTag = await paperless.GetTagByNameAsync(errorTagName, ct);
 
-            // Tags berechnen: Automation-Tags entfernen, Error-Tag hinzufügen
-            var tagsToRemove = new HashSet<int>();
-            if (ocrTag is not null) tagsToRemove.Add(ocrTag.Id);
-            if (aiTag is not null) tagsToRemove.Add(aiTag.Id);
+            // Nur Error-Tag hinzufügen, Prozess-Tags bleiben – Polling überspringt Dokumente mit Error-Tag
+            if (errorTag is null) return;
 
-            var updatedTags = doc.Tags
-                .Where(id => !tagsToRemove.Contains(id))
-                .ToList();
-
-            if (errorTag is not null && !updatedTags.Contains(errorTag.Id))
-                updatedTags.Add(errorTag.Id);
+            var updatedTags = doc.Tags.Contains(errorTag.Id)
+                ? doc.Tags.ToList()
+                : doc.Tags.Append(errorTag.Id).ToList();
 
             await paperless.UpdateDocumentAsync(job.DocumentId, new { tags = updatedTags }, ct);
 
