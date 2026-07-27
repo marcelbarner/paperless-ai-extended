@@ -27,6 +27,7 @@ public class SettingsController(AppDbContext db) : ControllerBase
         "Azure:OpenAI:Key",
         "Azure:OpenAI:DeploymentName",
         "Polling:IntervalSeconds",
+        PaperlessPollingService.PollingEnabledKey,
         OpenAIService.SystemPromptKey,
         OpenAIService.UserPromptTemplateKey,
         OpenAIService.CanCreateCorrespondentKey,
@@ -60,6 +61,9 @@ public class SettingsController(AppDbContext db) : ControllerBase
             result[DocumentIntelligenceService.OutputFormatKey] = "text";
         if (string.IsNullOrEmpty(result[DocumentIntelligenceService.ModelKey]))
             result[DocumentIntelligenceService.ModelKey] = "auto";
+
+        if (string.IsNullOrEmpty(result[PaperlessPollingService.PollingEnabledKey]))
+            result[PaperlessPollingService.PollingEnabledKey] = "true";
 
         // CanCreate defaults to "false"
         foreach (var key in new[]

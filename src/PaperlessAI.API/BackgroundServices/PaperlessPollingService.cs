@@ -16,6 +16,7 @@ public class PaperlessPollingService(
     public const string AiTagKey = "Paperless:AiTagName";
     public const string ErrorTagKey = "Paperless:ErrorTagName";
     public const string ReviewTagKey = "Paperless:ReviewTagName";
+    public const string PollingEnabledKey = "Polling:Enabled";
     public const string DefaultOcrTagName = "paperless-ai-ocr";
     public const string DefaultAiTagName = "paperless-ai-process";
     public const string DefaultErrorTagName = "paperless-ai-error";
@@ -48,6 +49,12 @@ public class PaperlessPollingService(
 
     private async Task PollAsync(CancellationToken ct)
     {
+        if (settings.Get(PollingEnabledKey) == "false")
+        {
+            logger.LogDebug("Polling deaktiviert – überspringe");
+            return;
+        }
+
         using var scope = scopeFactory.CreateScope();
         var paperless = scope.ServiceProvider.GetRequiredService<PaperlessClient>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

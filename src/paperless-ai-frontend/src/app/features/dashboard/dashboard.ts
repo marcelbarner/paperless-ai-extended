@@ -11,6 +11,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ApiService, ProcessingJob, JobStat } from '../../core/services/api';
 import { JobDetailDialogComponent } from './job-detail-dialog/job-detail-dialog';
 
@@ -28,7 +29,8 @@ import { JobDetailDialogComponent } from './job-detail-dialog/job-detail-dialog'
     MatPaginatorModule,
     MatSelectModule,
     MatFormFieldModule,
-    MatDialogModule
+    MatDialogModule,
+    MatSlideToggleModule
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
@@ -46,6 +48,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   pageSize = signal(20);
   statusFilter = signal<string>('');
   paperlessUrl = signal('http://localhost:8000');
+  pollingEnabled = signal(true);
+  togglingPolling = signal(false);
 
   displayedColumns = ['documentTitle', 'jobType', 'status', 'updatedAt', 'actions'];
 
@@ -53,6 +57,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.api.getSettings().subscribe(s => {
       const url = s['Paperless:BaseUrl'];
       if (url) this.paperlessUrl.set(url);
+      this.pollingEnabled.set(s['Polling:Enabled'] !== 'false');
     });
     this.load();
     this.refreshTimer = setInterval(() => this.load(), 15000);
@@ -82,6 +87,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.page.set(event.pageIndex + 1);
     this.pageSize.set(event.pageSize);
     this.load();
+  }
+
+  togglePolling(enabled: boolean) {
+    this.togglingPolling.set(true);
+    this.api.saveSettings({ 'Polling:Enabled': enabled ? 'true' : 'false' }).subscribe({
+      next: () => {
+        this.pollingEnabled.set(enabled);
+        this.togglingPolling.set(false);
+      },
+      error: () => this.togglingPolling.set(false)
+    });
   }
 
   retry(job: ProcessingJob) {
