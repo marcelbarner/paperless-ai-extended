@@ -12,6 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ApiService, SYSTEM_PROMPT_KEY, USER_PROMPT_KEY, AiConnection, AiProviderConfig } from '../../core/services/api';
 
 interface SettingOption { value: string; label: string; }
@@ -122,7 +123,8 @@ const TOGGLE_FIELDS: SettingField[] = [
     MatSnackBarModule,
     MatTooltipModule,
     MatDividerModule,
-    MatChipsModule
+    MatChipsModule,
+    DragDropModule
   ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss'
@@ -142,13 +144,38 @@ export class SettingsComponent implements OnInit {
   // Fallback Provider
   connections = signal<AiConnection[]>([]);
   providerConfigs = signal<AiProviderConfig[]>([]);
-  newConnection = signal({ name: '', endpoint: '', apiKey: '' });
-  newConfig = signal({ serviceType: 'OpenAI' as 'OpenAI' | 'DocumentIntelligence', connectionId: 0, modelOverride: '', priority: 1, isEnabled: true });
-  editingConnectionId = signal<number | null>(null);
-  editConnection = signal({ name: '', endpoint: '', apiKey: '' });
 
-  openAiConfigs = computed(() => this.providerConfigs().filter(c => c.serviceType === 'OpenAI').sort((a, b) => a.priority - b.priority));
-  docIntelConfigs = computed(() => this.providerConfigs().filter(c => c.serviceType === 'DocumentIntelligence').sort((a, b) => a.priority - b.priority));
+  openAiConnections = computed(() => this.connections().filter(c =>
+    this.providerConfigs().some(p => p.serviceType === 'OpenAI' && p.connectionId === c.id) ||
+    !this.providerConfigs().some(p => p.connectionId === c.id)
+  ));
+  docIntelConnections = computed(() => this.connections().filter(c =>
+    this.providerConfigs().some(p => p.serviceType === 'DocumentIntelligence' && p.connectionId === c.id) ||
+    !this.providerConfigs().some(p => p.connectionId === c.id)
+  ));
+
+  openAiConfigs = computed(() =>
+    [...this.providerConfigs().filter(c => c.serviceType === 'OpenAI')].sort((a, b) => a.priority - b.priority));
+  docIntelConfigs = computed(() =>
+    [...this.providerConfigs().filter(c => c.serviceType === 'DocumentIntelligence')].sort((a, b) => a.priority - b.priority));
+
+  newOpenAiConn = signal({ name: '', endpoint: '', apiKey: '' });
+  newDocIntelConn = signal({ name: '', endpoint: '', apiKey: '' });
+  editingConnId = signal<number | null>(null);
+  editConn = signal({ name: '', endpoint: '', apiKey: '' });
+
+  newOpenAiConfig = signal({ connectionId: 0, deploymentName: '' });
+  newDocIntelConfig = signal({ connectionId: 0, outputFormat: 'text', analysisModel: 'auto' });
+
+  readonly outputFormatOptions = [
+    { value: 'text', label: 'Text' },
+    { value: 'markdown', label: 'Markdown' }
+  ];
+  readonly analysisModelOptions = [
+    { value: 'auto', label: 'Automatisch' },
+    { value: 'prebuilt-read', label: 'prebuilt-read' },
+    { value: 'prebuilt-layout', label: 'prebuilt-layout' }
+  ];
 
   ngOnInit() {
     this.api.getSettings().subscribe(v => this.values.set({ ...v }));
@@ -190,79 +217,101 @@ export class SettingsComponent implements OnInit {
     });
   }
 
-  // ── Provider Management ──────────────────────────────────────────────────
+  // ── Connection Management ────────────────────────────────────────────────
 
-  setNewConnection(field: string, value: string) {
-    this.newConnection.update(c => ({ ...c, [field]: value }));
-  }
-
-  addConnection() {
-    const c = this.newConnection();
+  addConnection(type: 'openai' | 'docintel') {
+    const c = type === 'openai' ? this.newOpenAiConn() : this.newDocIntelConn();
     if (!c.name || !c.endpoint) return;
     this.api.createConnection(c.name, c.endpoint, c.apiKey).subscribe(() => {
-      this.newConnection.set({ name: '', endpoint: '', apiKey: '' });
+      type === 'openai'
+        ? this.newOpenAiConn.set({ name: '', endpoint: '', apiKey: '' })
+        : this.newDocIntelConn.set({ name: '', endpoint: '', apiKey: '' });
       this.loadProviders();
     });
   }
 
-  startEditConnection(conn: AiConnection) {
-    this.editingConnectionId.set(conn.id);
-    this.editConnection.set({ name: conn.name, endpoint: conn.endpoint, apiKey: '' });
+  startEditConn(conn: AiConnection) {
+    this.editingConnId.set(conn.id);
+    this.editConn.set({ name: conn.name, endpoint: conn.endpoint, apiKey: '' });
   }
 
-  setEditConnection(field: string, value: string) {
-    this.editConnection.update(c => ({ ...c, [field]: value }));
-  }
-
-  saveEditConnection() {
-    const id = this.editingConnectionId();
+  saveEditConn() {
+    const id = this.editingConnId();
     if (id === null) return;
-    const c = this.editConnection();
+    const c = this.editConn();
     this.api.updateConnection(id, c.name, c.endpoint, c.apiKey || undefined).subscribe(() => {
-      this.editingConnectionId.set(null);
+      this.editingConnId.set(null);
       this.loadProviders();
     });
-  }
-
-  cancelEditConnection() {
-    this.editingConnectionId.set(null);
   }
 
   deleteConnection(id: number) {
     this.api.deleteConnection(id).subscribe(() => this.loadProviders());
   }
 
-  setNewConfig(field: string, value: unknown) {
-    this.newConfig.update(c => ({ ...c, [field]: value }));
-  }
+  // ── Priority Config Management ───────────────────────────────────────────
 
-  addConfig() {
-    const c = this.newConfig();
+  addOpenAiConfig() {
+    const c = this.newOpenAiConfig();
     if (!c.connectionId) return;
     this.api.createProviderConfig({
-      serviceType: c.serviceType,
+      serviceType: 'OpenAI',
       connectionId: c.connectionId,
-      modelOverride: c.modelOverride || null,
-      priority: c.priority,
-      isEnabled: c.isEnabled
+      deploymentName: c.deploymentName || null,
+      isEnabled: true
     }).subscribe(() => {
-      this.newConfig.set({ serviceType: 'OpenAI', connectionId: 0, modelOverride: '', priority: 1, isEnabled: true });
+      this.newOpenAiConfig.set({ connectionId: 0, deploymentName: '' });
+      this.loadProviders();
+    });
+  }
+
+  addDocIntelConfig() {
+    const c = this.newDocIntelConfig();
+    if (!c.connectionId) return;
+    this.api.createProviderConfig({
+      serviceType: 'DocumentIntelligence',
+      connectionId: c.connectionId,
+      outputFormat: c.outputFormat,
+      analysisModel: c.analysisModel,
+      isEnabled: true
+    }).subscribe(() => {
+      this.newDocIntelConfig.set({ connectionId: 0, outputFormat: 'text', analysisModel: 'auto' });
       this.loadProviders();
     });
   }
 
   toggleConfig(config: AiProviderConfig) {
     this.api.updateProviderConfig(config.id, {
-      serviceType: config.serviceType,
       connectionId: config.connectionId,
-      modelOverride: config.modelOverride,
-      priority: config.priority,
+      deploymentName: config.deploymentName,
+      outputFormat: config.outputFormat,
+      analysisModel: config.analysisModel,
       isEnabled: !config.isEnabled
     }).subscribe(() => this.loadProviders());
   }
 
   deleteConfig(id: number) {
     this.api.deleteProviderConfig(id).subscribe(() => this.loadProviders());
+  }
+
+  dropOpenAi(event: CdkDragDrop<AiProviderConfig[]>) {
+    const list = [...this.openAiConfigs()];
+    moveItemInArray(list, event.previousIndex, event.currentIndex);
+    this.providerConfigs.update(all => [
+      ...all.filter(c => c.serviceType !== 'OpenAI'),
+      ...list.map((c, i) => ({ ...c, priority: i + 1 }))
+    ]);
+    this.api.reorderProviderConfigs('OpenAI', list.map(c => c.id)).subscribe();
+  }
+
+  dropDocIntel(event: CdkDragDrop<AiProviderConfig[]>) {
+    const list = [...this.docIntelConfigs()];
+    moveItemInArray(list, event.previousIndex, event.currentIndex);
+    this.providerConfigs.update(all => [
+      ...all.filter(c => c.serviceType !== 'DocumentIntelligence'),
+      ...list.map((c, i) => ({ ...c, priority: i + 1 }))
+    ]);
+    this.api.reorderProviderConfigs('DocumentIntelligence', list.map(c => c.id)).subscribe();
   }
 
   resetPrompt(key: string) {

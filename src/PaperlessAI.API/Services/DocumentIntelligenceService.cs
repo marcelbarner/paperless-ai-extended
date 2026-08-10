@@ -18,13 +18,8 @@ public class DocumentIntelligenceService(
 
     public async Task<string> AnalyzeDocumentAsync(byte[] pdfBytes, CancellationToken ct = default)
     {
-        var formatSetting = settings.Get(OutputFormatKey) ?? "text";
-        var isMarkdown = formatSetting.Equals("markdown", StringComparison.OrdinalIgnoreCase);
-        var outputFormat = isMarkdown ? DocumentContentFormat.Markdown : DocumentContentFormat.Text;
-        var modelOverrideSetting = settings.Get(ModelKey);
-        var defaultModel = !string.IsNullOrWhiteSpace(modelOverrideSetting)
-            ? modelOverrideSetting
-            : isMarkdown ? "prebuilt-layout" : "prebuilt-read";
+        var globalFormat = settings.Get(OutputFormatKey) ?? "text";
+        var globalModelSetting = settings.Get(ModelKey);
 
         var providers = await db.AiProviderConfigs
             .Include(p => p.Connection)
@@ -38,7 +33,7 @@ public class DocumentIntelligenceService(
                 ?? throw new InvalidOperationException("Azure:DocumentIntelligence:Endpoint not configured.");
             var key = settings.Get("Azure:DocumentIntelligence:Key")
                 ?? throw new InvalidOperationException("Azure:DocumentIntelligence:Key not configured.");
-            return await AnalyzeWithClientAsync(endpoint, key, defaultModel, outputFormat, formatSetting, pdfBytes, ct);
+            return await AnalyzeWithClientAsync(endpoint, key, globalFormat, globalModelSetting, pdfBytes, ct);
         }
 
         Exception? lastException = null;
@@ -46,13 +41,13 @@ public class DocumentIntelligenceService(
         {
             try
             {
-                var model = provider.ModelOverride ?? defaultModel;
+                var fmt = provider.OutputFormat ?? globalFormat;
+                var model = provider.AnalysisModel ?? globalModelSetting;
                 logger.LogInformation(
-                    "Document Intelligence: Versuche Provider '{Name}' (Prio={Prio}, Modell={Model})",
-                    provider.Connection.Name, provider.Priority, model);
+                    "Document Intelligence: Versuche Provider '{Name}' (Prio={Prio}, Format={Fmt}, Modell={Model})",
+                    provider.Connection.Name, provider.Priority, fmt, model ?? "auto");
                 return await AnalyzeWithClientAsync(
-                    provider.Connection.Endpoint, provider.Connection.ApiKey,
-                    model, outputFormat, formatSetting, pdfBytes, ct);
+                    provider.Connection.Endpoint, provider.Connection.ApiKey, fmt, model, pdfBytes, ct);
             }
             catch (RequestFailedException ex) when (FallbackStatusCodes.Contains(ex.Status))
             {
@@ -67,10 +62,15 @@ public class DocumentIntelligenceService(
     }
 
     private async Task<string> AnalyzeWithClientAsync(
-        string endpoint, string key, string modelId,
-        DocumentContentFormat outputFormat, string formatSetting,
+        string endpoint, string key, string formatSetting, string? modelOverride,
         byte[] pdfBytes, CancellationToken ct)
     {
+        var isMarkdown = formatSetting.Equals("markdown", StringComparison.OrdinalIgnoreCase);
+        var outputFormat = isMarkdown ? DocumentContentFormat.Markdown : DocumentContentFormat.Text;
+        var modelId = !string.IsNullOrWhiteSpace(modelOverride)
+            ? modelOverride
+            : isMarkdown ? "prebuilt-layout" : "prebuilt-read";
+
         logger.LogInformation(
             "Azure Document Intelligence: {Bytes} Bytes | Modell={Model} | Format={Format}",
             pdfBytes.Length, modelId, formatSetting);

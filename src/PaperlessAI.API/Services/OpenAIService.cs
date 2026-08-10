@@ -142,7 +142,7 @@ public class OpenAIService(AppSettingsService settings, AppDbContext db, ILogger
         {
             try
             {
-                var deployment = provider.ModelOverride ?? defaultDeployment;
+                var deployment = provider.DeploymentName ?? defaultDeployment;
                 logger.LogInformation(
                     "OpenAI: Versuche Provider '{Name}' (Prio={Prio}, Deployment={D})",
                     provider.Connection.Name, provider.Priority, deployment);

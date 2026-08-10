@@ -28,6 +28,7 @@ builder.Services.AddScoped<PaperlessClient>();
 // Azure services — scoped so AppDbContext (provider resolution) is available
 builder.Services.AddScoped<DocumentIntelligenceService>();
 builder.Services.AddScoped<OpenAIService>();
+builder.Services.AddScoped<DataSeeder>();
 builder.Services.AddScoped<MetadataContextBuilder>();
 builder.Services.AddScoped<ChatService>();
 
@@ -49,11 +50,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Auto-migrate on startup
+// Auto-migrate + seed on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+    await scope.ServiceProvider.GetRequiredService<DataSeeder>().SeedAsync();
 }
 
 app.MapOpenApi();

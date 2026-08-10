@@ -12,9 +12,14 @@ public class ProvidersController(AppDbContext db) : ControllerBase
     // ── Connections ──────────────────────────────────────────────────────────
 
     [HttpGet("connections")]
-    public async Task<IActionResult> GetConnections(CancellationToken ct)
+    public async Task<IActionResult> GetConnections([FromQuery] string? serviceType, CancellationToken ct)
     {
-        var connections = await db.AiConnections
+        var query = db.AiConnections.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(serviceType) && Enum.TryParse<AiServiceType>(serviceType, out var type))
+            query = query.Where(c => c.ProviderConfigs.Any(p => p.ServiceType == type));
+
+        var connections = await query
+            .OrderBy(c => c.Name)
             .Select(c => new { c.Id, c.Name, c.Endpoint, HasKey = !string.IsNullOrEmpty(c.ApiKey) })
             .ToListAsync(ct);
         return Ok(connections);
@@ -81,7 +86,10 @@ public class ProvidersController(AppDbContext db) : ControllerBase
                 ServiceType = p.ServiceType.ToString(),
                 p.ConnectionId,
                 ConnectionName = p.Connection.Name,
-                p.ModelOverride,
+                ConnectionEndpoint = p.Connection.Endpoint,
+                p.DeploymentName,
+                p.OutputFormat,
+                p.AnalysisModel,
                 p.Priority,
                 p.IsEnabled
             })
@@ -98,12 +106,19 @@ public class ProvidersController(AppDbContext db) : ControllerBase
         if (!await db.AiConnections.AnyAsync(c => c.Id == req.ConnectionId, ct))
             return BadRequest($"Connection {req.ConnectionId} not found");
 
+        var maxPriority = await db.AiProviderConfigs
+            .Where(p => p.ServiceType == serviceType)
+            .Select(p => (int?)p.Priority)
+            .MaxAsync(ct) ?? 0;
+
         var config = new AiProviderConfig
         {
             ServiceType = serviceType,
             ConnectionId = req.ConnectionId,
-            ModelOverride = req.ModelOverride,
-            Priority = req.Priority,
+            DeploymentName = req.DeploymentName,
+            OutputFormat = req.OutputFormat,
+            AnalysisModel = req.AnalysisModel,
+            Priority = maxPriority + 1,
             IsEnabled = req.IsEnabled
         };
         db.AiProviderConfigs.Add(config);
@@ -118,13 +133,32 @@ public class ProvidersController(AppDbContext db) : ControllerBase
         var config = await db.AiProviderConfigs.FindAsync([id], ct);
         if (config is null) return NotFound();
 
-        if (!string.IsNullOrWhiteSpace(req.ServiceType) &&
-            Enum.TryParse<AiServiceType>(req.ServiceType, out var serviceType))
-            config.ServiceType = serviceType;
         if (req.ConnectionId > 0) config.ConnectionId = req.ConnectionId;
-        config.ModelOverride = req.ModelOverride;
-        config.Priority = req.Priority;
+        config.DeploymentName = req.DeploymentName;
+        config.OutputFormat = req.OutputFormat;
+        config.AnalysisModel = req.AnalysisModel;
         config.IsEnabled = req.IsEnabled;
+
+        await db.SaveChangesAsync(ct);
+        return Ok();
+    }
+
+    [HttpPost("configs/reorder")]
+    public async Task<IActionResult> ReorderConfigs(
+        [FromBody] ReorderRequest req, CancellationToken ct)
+    {
+        if (!Enum.TryParse<AiServiceType>(req.ServiceType, out var serviceType))
+            return BadRequest($"Invalid serviceType: {req.ServiceType}");
+
+        var configs = await db.AiProviderConfigs
+            .Where(p => p.ServiceType == serviceType)
+            .ToListAsync(ct);
+
+        for (var i = 0; i < req.Ids.Count; i++)
+        {
+            var cfg = configs.FirstOrDefault(c => c.Id == req.Ids[i]);
+            if (cfg is not null) cfg.Priority = i + 1;
+        }
 
         await db.SaveChangesAsync(ct);
         return Ok();
@@ -142,4 +176,5 @@ public class ProvidersController(AppDbContext db) : ControllerBase
 }
 
 public record ConnectionRequest(string Name, string Endpoint, string? ApiKey);
-public record ProviderConfigRequest(string ServiceType, int ConnectionId, string? ModelOverride, int Priority, bool IsEnabled);
+public record ProviderConfigRequest(string ServiceType, int ConnectionId, string? DeploymentName, string? OutputFormat, string? AnalysisModel, bool IsEnabled);
+public record ReorderRequest(string ServiceType, List<int> Ids);

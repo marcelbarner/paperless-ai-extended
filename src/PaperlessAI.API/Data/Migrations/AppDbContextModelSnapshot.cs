@@ -49,13 +49,19 @@ namespace PaperlessAI.API.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AnalysisModel")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("ConnectionId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("DeploymentName")
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ModelOverride")
+                    b.Property<string>("OutputFormat")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Priority")

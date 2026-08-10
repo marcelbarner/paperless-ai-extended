@@ -57,7 +57,10 @@ export interface AiProviderConfig {
   serviceType: 'OpenAI' | 'DocumentIntelligence';
   connectionId: number;
   connectionName: string;
-  modelOverride: string | null;
+  connectionEndpoint: string;
+  deploymentName: string | null;
+  outputFormat: string | null;
+  analysisModel: string | null;
   priority: number;
   isEnabled: boolean;
 }
@@ -166,12 +169,16 @@ export class ApiService {
     return this.http.get<AiProviderConfig[]>(`${this.base}/providers/configs`);
   }
 
-  createProviderConfig(config: Omit<AiProviderConfig, 'id' | 'connectionName'>): Observable<number> {
-    return this.http.post<number>(`${this.base}/providers/configs`, config);
+  createProviderConfig(req: { serviceType: string; connectionId: number; deploymentName?: string | null; outputFormat?: string | null; analysisModel?: string | null; isEnabled: boolean }): Observable<number> {
+    return this.http.post<number>(`${this.base}/providers/configs`, req);
   }
 
-  updateProviderConfig(id: number, config: Omit<AiProviderConfig, 'id' | 'connectionName'>): Observable<void> {
-    return this.http.put<void>(`${this.base}/providers/configs/${id}`, config);
+  updateProviderConfig(id: number, req: { connectionId: number; deploymentName?: string | null; outputFormat?: string | null; analysisModel?: string | null; isEnabled: boolean }): Observable<void> {
+    return this.http.put<void>(`${this.base}/providers/configs/${id}`, req);
+  }
+
+  reorderProviderConfigs(serviceType: string, ids: number[]): Observable<void> {
+    return this.http.post<void>(`${this.base}/providers/configs/reorder`, { serviceType, ids });
   }
 
   deleteProviderConfig(id: number): Observable<void> {
