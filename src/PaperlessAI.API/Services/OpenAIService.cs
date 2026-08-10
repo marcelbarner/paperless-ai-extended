@@ -1,10 +1,14 @@
 using System.Text.Json;
+using Azure;
 using Azure.AI.OpenAI;
+using Microsoft.EntityFrameworkCore;
 using OpenAI.Chat;
+using PaperlessAI.API.Data;
+using PaperlessAI.API.Models.Domain;
 
 namespace PaperlessAI.API.Services;
 
-public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> logger)
+public class OpenAIService(AppSettingsService settings, AppDbContext db, ILogger<OpenAIService> logger)
 {
     public const string SystemPromptKey = "AI:SystemPrompt";
     public const string UserPromptTemplateKey = "AI:UserPromptTemplate";
@@ -105,16 +109,56 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
     public bool CanCreate(string key) =>
         settings.Get(key)?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
-    private ChatClient BuildClient()
-    {
-        var endpoint = settings.Get("Azure:OpenAI:Endpoint")
-            ?? throw new InvalidOperationException("Azure:OpenAI:Endpoint not configured.");
-        var key = settings.Get("Azure:OpenAI:Key")
-            ?? throw new InvalidOperationException("Azure:OpenAI:Key not configured.");
-        var deployment = settings.Get("Azure:OpenAI:DeploymentName") ?? "gpt-4o";
+    private static readonly int[] FallbackStatusCodes = [401, 429, 503];
 
-        return new AzureOpenAIClient(new Uri(endpoint), new System.ClientModel.ApiKeyCredential(key))
+    private static ChatClient BuildClient(string endpoint, string key, string deployment) =>
+        new AzureOpenAIClient(new Uri(endpoint), new System.ClientModel.ApiKeyCredential(key))
             .GetChatClient(deployment);
+
+    private async Task<DocumentProcessingResult> WithFallbackAsync(
+        string documentContent, string metadataContext, string systemPrompt, string userTemplate,
+        Func<string, CancellationToken, Task<string>> searchDocuments, CancellationToken ct)
+    {
+        var defaultDeployment = settings.Get("Azure:OpenAI:DeploymentName") ?? "gpt-4o";
+
+        var providers = await db.AiProviderConfigs
+            .Include(p => p.Connection)
+            .Where(p => p.ServiceType == AiServiceType.OpenAI && p.IsEnabled)
+            .OrderBy(p => p.Priority)
+            .ToListAsync(ct);
+
+        if (providers.Count == 0)
+        {
+            var endpoint = settings.Get("Azure:OpenAI:Endpoint")
+                ?? throw new InvalidOperationException("Azure:OpenAI:Endpoint not configured.");
+            var key = settings.Get("Azure:OpenAI:Key")
+                ?? throw new InvalidOperationException("Azure:OpenAI:Key not configured.");
+            var client = BuildClient(endpoint, key, defaultDeployment);
+            return await RunAsync(client, documentContent, metadataContext, systemPrompt, userTemplate, searchDocuments, ct);
+        }
+
+        Exception? lastException = null;
+        foreach (var provider in providers)
+        {
+            try
+            {
+                var deployment = provider.ModelOverride ?? defaultDeployment;
+                logger.LogInformation(
+                    "OpenAI: Versuche Provider '{Name}' (Prio={Prio}, Deployment={D})",
+                    provider.Connection.Name, provider.Priority, deployment);
+                var client = BuildClient(provider.Connection.Endpoint, provider.Connection.ApiKey, deployment);
+                return await RunAsync(client, documentContent, metadataContext, systemPrompt, userTemplate, searchDocuments, ct);
+            }
+            catch (RequestFailedException ex) when (FallbackStatusCodes.Contains(ex.Status))
+            {
+                logger.LogWarning(
+                    "OpenAI Provider '{Name}' fehlgeschlagen mit HTTP {Status} – nächster Provider wird versucht",
+                    provider.Connection.Name, ex.Status);
+                lastException = ex;
+            }
+        }
+
+        throw lastException ?? new InvalidOperationException("Alle OpenAI Provider fehlgeschlagen");
     }
 
     public Task<DocumentProcessingResult> ProcessDocumentWithPromptsAsync(
@@ -124,7 +168,7 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
         string userPromptTemplate,
         Func<string, CancellationToken, Task<string>> searchDocuments,
         CancellationToken ct = default)
-        => RunAsync(documentContent, metadataContext, systemPrompt, userPromptTemplate, searchDocuments, ct);
+        => WithFallbackAsync(documentContent, metadataContext, systemPrompt, userPromptTemplate, searchDocuments, ct);
 
     public Task<DocumentProcessingResult> ProcessDocumentAsync(
         string documentContent,
@@ -134,10 +178,11 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
     {
         var systemPrompt = settings.Get(SystemPromptKey) ?? DefaultSystemPrompt;
         var userTemplate = settings.Get(UserPromptTemplateKey) ?? DefaultUserPromptTemplate;
-        return RunAsync(documentContent, metadataContext, systemPrompt, userTemplate, searchDocuments, ct);
+        return WithFallbackAsync(documentContent, metadataContext, systemPrompt, userTemplate, searchDocuments, ct);
     }
 
     private async Task<DocumentProcessingResult> RunAsync(
+        ChatClient client,
         string documentContent,
         string metadataContext,
         string systemPrompt,
@@ -185,7 +230,7 @@ public class OpenAIService(AppSettingsService settings, ILogger<OpenAIService> l
 
         while (toolRound <= MaxToolRounds)
         {
-            var response = await BuildClient().CompleteChatAsync(messages, options, ct);
+            var response = await client.CompleteChatAsync(messages, options, ct);
             var completion = response.Value;
 
             if (completion.FinishReason == ChatFinishReason.ToolCalls)

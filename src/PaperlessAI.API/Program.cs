@@ -21,12 +21,13 @@ builder.Services.AddSingleton<AppSettingsService>();
 // HTTP client factory for PaperlessClient (URL/token comes from DB at runtime)
 builder.Services.AddTransient<DetailedHttpErrorHandler>();
 builder.Services.AddHttpClient("paperless")
-    .AddHttpMessageHandler<DetailedHttpErrorHandler>();
+    .AddHttpMessageHandler<DetailedHttpErrorHandler>()
+    .AddStandardResilienceHandler();
 builder.Services.AddScoped<PaperlessClient>();
 
-// Azure services — credentials read from DB at call time
-builder.Services.AddSingleton<DocumentIntelligenceService>();
-builder.Services.AddSingleton<OpenAIService>();
+// Azure services — scoped so AppDbContext (provider resolution) is available
+builder.Services.AddScoped<DocumentIntelligenceService>();
+builder.Services.AddScoped<OpenAIService>();
 builder.Services.AddScoped<MetadataContextBuilder>();
 builder.Services.AddScoped<ChatService>();
 

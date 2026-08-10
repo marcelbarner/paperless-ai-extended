@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,7 +11,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
-import { ApiService, SYSTEM_PROMPT_KEY, USER_PROMPT_KEY } from '../../core/services/api';
+import { ApiService, SYSTEM_PROMPT_KEY, USER_PROMPT_KEY, AiConnection, AiProviderConfig } from '../../core/services/api';
 
 interface SettingOption { value: string; label: string; }
 
@@ -65,6 +65,19 @@ const CONNECTION_FIELDS: SettingField[][] = [
 
 const SECTION_TITLES = ['Paperless-NGX', 'Azure Document Intelligence (OCR)', 'Azure OpenAI'];
 
+const PROCESSING_TOGGLE_FIELDS: SettingField[] = [
+  {
+    key: 'Processing:OcrEnabled',
+    label: 'OCR-Verarbeitung aktiv',
+    hint: 'Dokumente mit OCR-Tag werden durch Azure Document Intelligence verarbeitet'
+  },
+  {
+    key: 'Processing:AiEnabled',
+    label: 'KI-Verarbeitung aktiv',
+    hint: 'Dokumente mit KI-Tag werden durch Azure OpenAI analysiert und erhalten danach den Review-Tag'
+  }
+];
+
 const TOGGLE_FIELDS: SettingField[] = [
   {
     key: 'AI:CanCreate:Correspondent',
@@ -117,14 +130,32 @@ export class SettingsComponent implements OnInit {
   private readonly snack = inject(MatSnackBar);
 
   sections = CONNECTION_FIELDS.map((fields, i) => ({ title: SECTION_TITLES[i], fields }));
+  processingToggleFields = PROCESSING_TOGGLE_FIELDS;
   toggleFields = TOGGLE_FIELDS;
   values = signal<Record<string, string>>({});
   saving = signal(false);
   systemPromptKey = SYSTEM_PROMPT_KEY;
   userPromptKey = USER_PROMPT_KEY;
 
+  // Fallback Provider
+  connections = signal<AiConnection[]>([]);
+  providerConfigs = signal<AiProviderConfig[]>([]);
+  newConnection = signal({ name: '', endpoint: '', apiKey: '' });
+  newConfig = signal({ serviceType: 'OpenAI' as 'OpenAI' | 'DocumentIntelligence', connectionId: 0, modelOverride: '', priority: 1, isEnabled: true });
+  editingConnectionId = signal<number | null>(null);
+  editConnection = signal({ name: '', endpoint: '', apiKey: '' });
+
+  openAiConfigs = computed(() => this.providerConfigs().filter(c => c.serviceType === 'OpenAI').sort((a, b) => a.priority - b.priority));
+  docIntelConfigs = computed(() => this.providerConfigs().filter(c => c.serviceType === 'DocumentIntelligence').sort((a, b) => a.priority - b.priority));
+
   ngOnInit() {
     this.api.getSettings().subscribe(v => this.values.set({ ...v }));
+    this.loadProviders();
+  }
+
+  loadProviders() {
+    this.api.getConnections().subscribe(c => this.connections.set(c));
+    this.api.getProviderConfigs().subscribe(c => this.providerConfigs.set(c));
   }
 
   getValue(key: string): string {
@@ -155,6 +186,81 @@ export class SettingsComponent implements OnInit {
         this.snack.open('Fehler beim Speichern', 'OK', { duration: 3000 });
       }
     });
+  }
+
+  // ── Provider Management ──────────────────────────────────────────────────
+
+  setNewConnection(field: string, value: string) {
+    this.newConnection.update(c => ({ ...c, [field]: value }));
+  }
+
+  addConnection() {
+    const c = this.newConnection();
+    if (!c.name || !c.endpoint) return;
+    this.api.createConnection(c.name, c.endpoint, c.apiKey).subscribe(() => {
+      this.newConnection.set({ name: '', endpoint: '', apiKey: '' });
+      this.loadProviders();
+    });
+  }
+
+  startEditConnection(conn: AiConnection) {
+    this.editingConnectionId.set(conn.id);
+    this.editConnection.set({ name: conn.name, endpoint: conn.endpoint, apiKey: '' });
+  }
+
+  setEditConnection(field: string, value: string) {
+    this.editConnection.update(c => ({ ...c, [field]: value }));
+  }
+
+  saveEditConnection() {
+    const id = this.editingConnectionId();
+    if (id === null) return;
+    const c = this.editConnection();
+    this.api.updateConnection(id, c.name, c.endpoint, c.apiKey || undefined).subscribe(() => {
+      this.editingConnectionId.set(null);
+      this.loadProviders();
+    });
+  }
+
+  cancelEditConnection() {
+    this.editingConnectionId.set(null);
+  }
+
+  deleteConnection(id: number) {
+    this.api.deleteConnection(id).subscribe(() => this.loadProviders());
+  }
+
+  setNewConfig(field: string, value: unknown) {
+    this.newConfig.update(c => ({ ...c, [field]: value }));
+  }
+
+  addConfig() {
+    const c = this.newConfig();
+    if (!c.connectionId) return;
+    this.api.createProviderConfig({
+      serviceType: c.serviceType,
+      connectionId: c.connectionId,
+      modelOverride: c.modelOverride || null,
+      priority: c.priority,
+      isEnabled: c.isEnabled
+    }).subscribe(() => {
+      this.newConfig.set({ serviceType: 'OpenAI', connectionId: 0, modelOverride: '', priority: 1, isEnabled: true });
+      this.loadProviders();
+    });
+  }
+
+  toggleConfig(config: AiProviderConfig) {
+    this.api.updateProviderConfig(config.id, {
+      serviceType: config.serviceType,
+      connectionId: config.connectionId,
+      modelOverride: config.modelOverride,
+      priority: config.priority,
+      isEnabled: !config.isEnabled
+    }).subscribe(() => this.loadProviders());
+  }
+
+  deleteConfig(id: number) {
+    this.api.deleteProviderConfig(id).subscribe(() => this.loadProviders());
   }
 
   resetPrompt(key: string) {

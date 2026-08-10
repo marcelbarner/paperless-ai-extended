@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
@@ -8,10 +8,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ApiService, ProcessingJob, JobStat } from '../../core/services/api';
 import { JobDetailDialogComponent } from './job-detail-dialog/job-detail-dialog';
 
@@ -30,7 +32,9 @@ import { JobDetailDialogComponent } from './job-detail-dialog/job-detail-dialog'
     MatSelectModule,
     MatFormFieldModule,
     MatDialogModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatCheckboxModule,
+    MatSortModule
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
@@ -47,11 +51,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
   page = signal(1);
   pageSize = signal(20);
   statusFilter = signal<string>('');
+  jobTypeFilter = signal<string[]>([]);
+  sortBy = signal('updatedAt');
+  sortDir = signal<'asc' | 'desc'>('desc');
+  selectedIds = signal<Set<number>>(new Set());
   paperlessUrl = signal('http://localhost:8000');
   pollingEnabled = signal(true);
   togglingPolling = signal(false);
 
-  displayedColumns = ['documentTitle', 'jobType', 'status', 'updatedAt', 'actions'];
+  selectedFailedIds = computed(() => {
+    const ids = this.selectedIds();
+    return this.jobs()
+      .filter(j => j.status === 'Failed' && ids.has(j.id))
+      .map(j => j.id);
+  });
+
+  allOnPageSelected = computed(() => {
+    const ids = this.selectedIds();
+    const visible = this.jobs();
+    return visible.length > 0 && visible.every(j => ids.has(j.id));
+  });
+
+  displayedColumns = ['select', 'documentTitle', 'jobType', 'status', 'updatedAt', 'actions'];
 
   ngOnInit() {
     this.api.getSettings().subscribe(s => {
@@ -69,10 +90,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   load() {
     const filter = this.statusFilter() || undefined;
-    this.api.getJobs(filter, this.page(), this.pageSize()).subscribe(p => {
+    const jobTypes = this.jobTypeFilter().length > 0 ? this.jobTypeFilter() : undefined;
+    this.api.getJobs(filter, this.page(), this.pageSize(), jobTypes, this.sortBy(), this.sortDir()).subscribe(p => {
       this.jobs.set(p.jobs);
       this.total.set(p.total);
       this.loading.set(false);
+      this.selectedIds.set(new Set());
     });
     this.api.getJobStats().subscribe(stats => this.stats.set(stats));
   }
@@ -83,10 +106,49 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.load();
   }
 
+  onSortChange(sort: Sort) {
+    this.sortBy.set(sort.active || 'updatedAt');
+    this.sortDir.set((sort.direction || 'desc') as 'asc' | 'desc');
+    this.page.set(1);
+    this.load();
+  }
+
+  onJobTypeFilterChange(types: string[]) {
+    this.jobTypeFilter.set(types);
+    this.page.set(1);
+    this.load();
+  }
+
   onPage(event: PageEvent) {
     this.page.set(event.pageIndex + 1);
     this.pageSize.set(event.pageSize);
     this.load();
+  }
+
+  toggleSelect(job: ProcessingJob, checked: boolean) {
+    this.selectedIds.update(ids => {
+      const next = new Set(ids);
+      checked ? next.add(job.id) : next.delete(job.id);
+      return next;
+    });
+  }
+
+  isSelected(job: ProcessingJob): boolean {
+    return this.selectedIds().has(job.id);
+  }
+
+  toggleSelectAll(checked: boolean) {
+    this.selectedIds.update(ids => {
+      const next = new Set(ids);
+      this.jobs().forEach(j => checked ? next.add(j.id) : next.delete(j.id));
+      return next;
+    });
+  }
+
+  batchRetry() {
+    const ids = this.selectedFailedIds();
+    if (ids.length === 0) return;
+    this.api.batchRetry(ids).subscribe(() => this.load());
   }
 
   togglePolling(enabled: boolean) {

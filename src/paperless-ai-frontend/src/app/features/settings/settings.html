@@ -40,6 +40,31 @@
           </mat-card>
         }
 
+        <!-- Verarbeitungs-Steuerung -->
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>Verarbeitungs-Steuerung</mat-card-title>
+            <mat-card-subtitle>
+              Steuere welche Verarbeitungsschritte aktiv sind. Wenn beide deaktiviert sind, werden keine Dokumente verarbeitet.
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @for (field of processingToggleFields; track field.key) {
+              <div class="toggle-row">
+                <div class="toggle-label">
+                  <span>{{ field.label }}</span>
+                  @if (field.hint) { <small>{{ field.hint }}</small> }
+                </div>
+                <mat-slide-toggle
+                  [checked]="isTrue(field.key)"
+                  (change)="setToggle(field.key, $event.checked)">
+                </mat-slide-toggle>
+              </div>
+              <mat-divider></mat-divider>
+            }
+          </mat-card-content>
+        </mat-card>
+
         <!-- KI-Anlegen-Berechtigungen -->
         <mat-card class="settings-card">
           <mat-card-header>
@@ -68,7 +93,178 @@
       </div>
     </mat-tab>
 
-    <!-- Tab 2: KI-Prompts -->
+    <!-- Tab 2: Fallback-Provider -->
+    <mat-tab label="Fallback-Provider">
+      <div class="tab-content">
+
+        <!-- Verbindungen -->
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>Verbindungen</mat-card-title>
+            <mat-card-subtitle>Wiederverwendbare Endpunkt-/API-Key-Paare für OpenAI und Document Intelligence</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @for (conn of connections(); track conn.id) {
+              @if (editingConnectionId() === conn.id) {
+                <div class="provider-row editing">
+                  <mat-form-field appearance="outline" class="flex-field">
+                    <mat-label>Name</mat-label>
+                    <input matInput [value]="editConnection().name"
+                      (input)="setEditConnection('name', $any($event.target).value)" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="flex-field">
+                    <mat-label>Endpoint</mat-label>
+                    <input matInput [value]="editConnection().endpoint"
+                      (input)="setEditConnection('endpoint', $any($event.target).value)" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="flex-field">
+                    <mat-label>API Key (leer lassen = unverändert)</mat-label>
+                    <input matInput type="password" [value]="editConnection().apiKey"
+                      (input)="setEditConnection('apiKey', $any($event.target).value)" />
+                  </mat-form-field>
+                  <button mat-icon-button color="primary" (click)="saveEditConnection()" matTooltip="Speichern">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="cancelEditConnection()" matTooltip="Abbrechen">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              } @else {
+                <div class="provider-row">
+                  <span class="provider-name">{{ conn.name }}</span>
+                  <span class="provider-endpoint">{{ conn.endpoint }}</span>
+                  <mat-chip [color]="conn.hasKey ? 'primary' : 'warn'" [highlighted]="true">
+                    {{ conn.hasKey ? 'Key gesetzt' : 'Kein Key' }}
+                  </mat-chip>
+                  <button mat-icon-button (click)="startEditConnection(conn)" matTooltip="Bearbeiten">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="deleteConnection(conn.id)" matTooltip="Löschen">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              }
+              <mat-divider></mat-divider>
+            }
+
+            <div class="provider-row new-row">
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>Name</mat-label>
+                <input matInput [value]="newConnection().name"
+                  (input)="setNewConnection('name', $any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>Endpoint</mat-label>
+                <input matInput [value]="newConnection().endpoint"
+                  (input)="setNewConnection('endpoint', $any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>API Key</mat-label>
+                <input matInput type="password" [value]="newConnection().apiKey"
+                  (input)="setNewConnection('apiKey', $any($event.target).value)" />
+              </mat-form-field>
+              <button mat-mini-fab color="primary" (click)="addConnection()" matTooltip="Verbindung hinzufügen"
+                [disabled]="!newConnection().name || !newConnection().endpoint">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Provider-Config: OpenAI -->
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>Fallback-Provider: Azure OpenAI</mat-card-title>
+            <mat-card-subtitle>Werden der Reihe nach nach Priorität (aufsteigend) versucht. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @for (cfg of openAiConfigs(); track cfg.id) {
+              <div class="provider-row">
+                <span class="provider-prio">Prio {{ cfg.priority }}</span>
+                <span class="provider-name">{{ cfg.connectionName }}</span>
+                <span class="provider-model">{{ cfg.modelOverride || '(Standard-Deployment)' }}</span>
+                <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
+                <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+              <mat-divider></mat-divider>
+            }
+            <div class="provider-row new-row">
+              <mat-form-field appearance="outline" class="flex-field-sm">
+                <mat-label>Prio</mat-label>
+                <input matInput type="number" [value]="newConfig().priority"
+                  (input)="setNewConfig('priority', +$any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>Verbindung</mat-label>
+                <mat-select [value]="newConfig().connectionId" (selectionChange)="setNewConfig('connectionId', $event.value)">
+                  @for (c of connections(); track c.id) {
+                    <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>Deployment (leer = Standard)</mat-label>
+                <input matInput [value]="newConfig().modelOverride"
+                  (input)="setNewConfig('modelOverride', $any($event.target).value)" />
+              </mat-form-field>
+              <button mat-mini-fab color="primary"
+                (click)="setNewConfig('serviceType', 'OpenAI'); addConfig()"
+                [disabled]="!newConfig().connectionId"
+                matTooltip="OpenAI-Provider hinzufügen">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Provider-Config: Document Intelligence -->
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>Fallback-Provider: Azure Document Intelligence</mat-card-title>
+            <mat-card-subtitle>Werden der Reihe nach nach Priorität (aufsteigend) versucht. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @for (cfg of docIntelConfigs(); track cfg.id) {
+              <div class="provider-row">
+                <span class="provider-prio">Prio {{ cfg.priority }}</span>
+                <span class="provider-name">{{ cfg.connectionName }}</span>
+                <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
+                <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+              <mat-divider></mat-divider>
+            }
+            <div class="provider-row new-row">
+              <mat-form-field appearance="outline" class="flex-field-sm">
+                <mat-label>Prio</mat-label>
+                <input matInput type="number" [value]="newConfig().priority"
+                  (input)="setNewConfig('priority', +$any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>Verbindung</mat-label>
+                <mat-select [value]="newConfig().connectionId" (selectionChange)="setNewConfig('connectionId', $event.value)">
+                  @for (c of connections(); track c.id) {
+                    <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button mat-mini-fab color="primary"
+                (click)="setNewConfig('serviceType', 'DocumentIntelligence'); addConfig()"
+                [disabled]="!newConfig().connectionId"
+                matTooltip="Document Intelligence-Provider hinzufügen">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </mat-tab>
+
+    <!-- Tab 3: KI-Prompts -->
     <mat-tab label="KI-Prompts">
       <div class="tab-content">
 

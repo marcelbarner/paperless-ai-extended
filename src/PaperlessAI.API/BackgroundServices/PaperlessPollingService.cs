@@ -17,6 +17,8 @@ public class PaperlessPollingService(
     public const string ErrorTagKey = "Paperless:ErrorTagName";
     public const string ReviewTagKey = "Paperless:ReviewTagName";
     public const string PollingEnabledKey = "Polling:Enabled";
+    public const string OcrEnabledKey = "Processing:OcrEnabled";
+    public const string AiEnabledKey = "Processing:AiEnabled";
     public const string DefaultOcrTagName = "paperless-ai-ocr";
     public const string DefaultAiTagName = "paperless-ai-process";
     public const string DefaultErrorTagName = "paperless-ai-error";
@@ -24,9 +26,10 @@ public class PaperlessPollingService(
 
     private string ErrorTagName => settings.Get(ErrorTagKey) ?? DefaultErrorTagName;
     private string ReviewTagName => settings.Get(ReviewTagKey) ?? DefaultReviewTagName;
-
     private string OcrTagName => settings.Get(OcrTagKey) ?? DefaultOcrTagName;
     private string AiTagName => settings.Get(AiTagKey) ?? DefaultAiTagName;
+    private bool OcrEnabled => settings.Get(OcrEnabledKey) != "false";
+    private bool AiEnabled => settings.Get(AiEnabledKey) != "false";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -55,6 +58,15 @@ public class PaperlessPollingService(
             return;
         }
 
+        var ocrEnabled = OcrEnabled;
+        var aiEnabled = AiEnabled;
+
+        if (!ocrEnabled && !aiEnabled)
+        {
+            logger.LogDebug("OCR und KI-Verarbeitung deaktiviert – überspringe Poll");
+            return;
+        }
+
         using var scope = scopeFactory.CreateScope();
         var paperless = scope.ServiceProvider.GetRequiredService<PaperlessClient>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -62,17 +74,15 @@ public class PaperlessPollingService(
         var ocrTagName = OcrTagName;
         var aiTagName = AiTagName;
 
-        // Beide Tags laden (IDs für Vergleich)
-        var ocrTag = await paperless.GetTagByNameAsync(ocrTagName, ct);
-        var aiTag = await paperless.GetTagByNameAsync(aiTagName, ct);
+        var ocrTag = ocrEnabled ? await paperless.GetTagByNameAsync(ocrTagName, ct) : null;
+        var aiTag = aiEnabled ? await paperless.GetTagByNameAsync(aiTagName, ct) : null;
 
         if (ocrTag is null && aiTag is null)
         {
-            logger.LogDebug("Keine Verarbeitungs-Tags gefunden, überspringe Poll");
+            logger.LogDebug("Keine aktiven Verarbeitungs-Tags gefunden, überspringe Poll");
             return;
         }
 
-        // Alle Dokumente holen die mindestens einen der beiden Tags haben
         var tagNamesToSearch = new List<string>();
         if (ocrTag is not null) tagNamesToSearch.Add(ocrTagName);
         if (aiTag is not null) tagNamesToSearch.Add(aiTagName);
@@ -80,7 +90,6 @@ public class PaperlessPollingService(
         var documents = await paperless.GetDocumentsWithTagsAsync(tagNamesToSearch, ct);
         logger.LogDebug("Poll: {Count} Dokument(e) mit Verarbeitungs-Tags gefunden", documents.Count);
 
-        // Fehler-Tag-ID für Ausschluss
         var errorTag = await paperless.GetTagByNameAsync(ErrorTagName, ct);
 
         foreach (var doc in documents)
@@ -88,15 +97,13 @@ public class PaperlessPollingService(
             var hasOcr = ocrTag is not null && doc.Tags.Contains(ocrTag.Id);
             var hasAi = aiTag is not null && doc.Tags.Contains(aiTag.Id);
 
-            // Dokumente mit Fehler-Tag überspringen
             if (errorTag is not null && doc.Tags.Contains(errorTag.Id))
             {
                 logger.LogDebug("Dokument {DocId} hat Fehler-Tag – wird übersprungen", doc.Id);
                 continue;
             }
 
-            // OCR-Job anlegen wenn OCR-Tag vorhanden und noch kein aktiver OCR-Job
-            if (hasOcr)
+            if (ocrEnabled && hasOcr)
             {
                 var ocrAlreadyQueued = await db.ProcessingJobs.AnyAsync(
                     j => j.DocumentId == doc.Id && j.JobType == JobType.Ocr &&
@@ -112,11 +119,8 @@ public class PaperlessPollingService(
                 }
             }
 
-            // AI-Job NUR anlegen wenn:
-            // - AI-Tag vorhanden
-            // - OCR-Tag NICHT vorhanden (OCR muss zuerst abgeschlossen sein)
-            // - Noch kein aktiver AI-Job
-            if (hasAi && !hasOcr)
+            // AI-Job nur wenn: AI aktiviert, AI-Tag vorhanden, OCR-Tag NICHT vorhanden
+            if (aiEnabled && hasAi && !hasOcr)
             {
                 var aiAlreadyQueued = await db.ProcessingJobs.AnyAsync(
                     j => j.DocumentId == doc.Id && j.JobType == JobType.Ai &&
@@ -132,11 +136,10 @@ public class PaperlessPollingService(
                 }
             }
 
-            // Hat Dokument beiden Tags → nur OCR läuft, AI folgt nach OCR-Abschluss
-            if (hasOcr && hasAi)
+            if (hasOcr && hasAi && !ocrEnabled)
             {
                 logger.LogDebug(
-                    "Dokument {DocId} hat beide Tags: OCR läuft zuerst, AI folgt nach OCR-Abschluss",
+                    "Dokument {DocId} hat OCR-Tag, aber OCR ist deaktiviert – AI-Job wird nicht erstellt",
                     doc.Id);
             }
         }

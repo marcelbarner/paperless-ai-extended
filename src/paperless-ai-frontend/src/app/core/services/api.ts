@@ -45,17 +45,41 @@ export type MetadataType =
 export const SYSTEM_PROMPT_KEY = 'AI:SystemPrompt';
 export const USER_PROMPT_KEY = 'AI:UserPromptTemplate';
 
+export interface AiConnection {
+  id: number;
+  name: string;
+  endpoint: string;
+  hasKey: boolean;
+}
+
+export interface AiProviderConfig {
+  id: number;
+  serviceType: 'OpenAI' | 'DocumentIntelligence';
+  connectionId: number;
+  connectionName: string;
+  modelOverride: string | null;
+  priority: number;
+  isEnabled: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api';
 
-  getJobs(status?: string, page = 1, pageSize = 20): Observable<JobsPage> {
+  getJobs(status?: string, page = 1, pageSize = 20, jobTypes?: string[], sortBy?: string, sortDir?: string): Observable<JobsPage> {
     let params = new HttpParams()
       .set('page', page)
       .set('pageSize', pageSize);
     if (status) params = params.set('status', status);
+    for (const t of jobTypes ?? []) params = params.append('jobType', t);
+    if (sortBy) params = params.set('sortBy', sortBy);
+    if (sortDir) params = params.set('sortDir', sortDir);
     return this.http.get<JobsPage>(`${this.base}/queue/jobs`, { params });
+  }
+
+  batchRetry(ids: number[]): Observable<{ retried: number }> {
+    return this.http.post<{ retried: number }>(`${this.base}/queue/jobs/batch-retry`, ids);
   }
 
   getJobStats(): Observable<JobStat[]> {
@@ -92,6 +116,38 @@ export class ApiService {
 
   saveSettings(settings: Record<string, string>): Observable<void> {
     return this.http.put<void>(`${this.base}/settings`, settings);
+  }
+
+  getConnections(): Observable<AiConnection[]> {
+    return this.http.get<AiConnection[]>(`${this.base}/providers/connections`);
+  }
+
+  createConnection(name: string, endpoint: string, apiKey: string): Observable<AiConnection> {
+    return this.http.post<AiConnection>(`${this.base}/providers/connections`, { name, endpoint, apiKey });
+  }
+
+  updateConnection(id: number, name: string, endpoint: string, apiKey?: string): Observable<AiConnection> {
+    return this.http.put<AiConnection>(`${this.base}/providers/connections/${id}`, { name, endpoint, apiKey });
+  }
+
+  deleteConnection(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/providers/connections/${id}`);
+  }
+
+  getProviderConfigs(): Observable<AiProviderConfig[]> {
+    return this.http.get<AiProviderConfig[]>(`${this.base}/providers/configs`);
+  }
+
+  createProviderConfig(config: Omit<AiProviderConfig, 'id' | 'connectionName'>): Observable<number> {
+    return this.http.post<number>(`${this.base}/providers/configs`, config);
+  }
+
+  updateProviderConfig(id: number, config: Omit<AiProviderConfig, 'id' | 'connectionName'>): Observable<void> {
+    return this.http.put<void>(`${this.base}/providers/configs/${id}`, config);
+  }
+
+  deleteProviderConfig(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/providers/configs/${id}`);
   }
 
   resetPrompt(promptKey: string): Observable<{ value: string }> {
