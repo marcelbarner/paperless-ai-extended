@@ -29,6 +29,7 @@ public class DataSeeder(AppDbContext db, AppSettingsService settings, ILogger<Da
 
         var connection = new AiConnection
         {
+            ServiceType = AiServiceType.OpenAI,
             Name = "Default Azure AI Service",
             Endpoint = endpoint,
             ApiKey = key
@@ -61,6 +62,7 @@ public class DataSeeder(AppDbContext db, AppSettingsService settings, ILogger<Da
 
         var connection = new AiConnection
         {
+            ServiceType = AiServiceType.DocumentIntelligence,
             Name = "Default Azure Document Intelligence",
             Endpoint = endpoint,
             ApiKey = key

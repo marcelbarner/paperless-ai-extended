@@ -113,14 +113,8 @@ export class SettingsComponent implements OnInit {
   connections = signal<AiConnection[]>([]);
   providerConfigs = signal<AiProviderConfig[]>([]);
 
-  openAiConnections = computed(() => this.connections().filter(c =>
-    this.providerConfigs().some(p => p.serviceType === 'OpenAI' && p.connectionId === c.id) ||
-    !this.providerConfigs().some(p => p.connectionId === c.id)
-  ));
-  docIntelConnections = computed(() => this.connections().filter(c =>
-    this.providerConfigs().some(p => p.serviceType === 'DocumentIntelligence' && p.connectionId === c.id) ||
-    !this.providerConfigs().some(p => p.connectionId === c.id)
-  ));
+  openAiConnections = computed(() => this.connections().filter(c => c.serviceType === 'OpenAI'));
+  docIntelConnections = computed(() => this.connections().filter(c => c.serviceType === 'DocumentIntelligence'));
 
   openAiConfigs = computed(() =>
     [...this.providerConfigs().filter(c => c.serviceType === 'OpenAI')].sort((a, b) => a.priority - b.priority));
@@ -193,7 +187,8 @@ export class SettingsComponent implements OnInit {
   addConnection(type: 'openai' | 'docintel') {
     const c = type === 'openai' ? this.newOpenAiConn() : this.newDocIntelConn();
     if (!c.name || !c.endpoint) return;
-    this.api.createConnection(c.name, c.endpoint, c.apiKey).subscribe(() => {
+    const serviceType = type === 'openai' ? 'OpenAI' : 'DocumentIntelligence';
+    this.api.createConnection(serviceType, c.name, c.endpoint, c.apiKey).subscribe(() => {
       type === 'openai'
         ? this.newOpenAiConn.set({ name: '', endpoint: '', apiKey: '' })
         : this.newDocIntelConn.set({ name: '', endpoint: '', apiKey: '' });

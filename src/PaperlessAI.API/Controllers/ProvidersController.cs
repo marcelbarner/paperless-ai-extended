@@ -12,15 +12,11 @@ public class ProvidersController(AppDbContext db) : ControllerBase
     // ── Connections ──────────────────────────────────────────────────────────
 
     [HttpGet("connections")]
-    public async Task<IActionResult> GetConnections([FromQuery] string? serviceType, CancellationToken ct)
+    public async Task<IActionResult> GetConnections(CancellationToken ct)
     {
-        var query = db.AiConnections.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(serviceType) && Enum.TryParse<AiServiceType>(serviceType, out var type))
-            query = query.Where(c => c.ProviderConfigs.Any(p => p.ServiceType == type));
-
-        var connections = await query
+        var connections = await db.AiConnections
             .OrderBy(c => c.Name)
-            .Select(c => new { c.Id, c.Name, c.Endpoint, HasKey = !string.IsNullOrEmpty(c.ApiKey) })
+            .Select(c => new { c.Id, ServiceType = c.ServiceType.ToString(), c.Name, c.Endpoint, HasKey = !string.IsNullOrEmpty(c.ApiKey) })
             .ToListAsync(ct);
         return Ok(connections);
     }
@@ -31,19 +27,22 @@ public class ProvidersController(AppDbContext db) : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest("Name is required");
         if (string.IsNullOrWhiteSpace(req.Endpoint)) return BadRequest("Endpoint is required");
+        if (!Enum.TryParse<AiServiceType>(req.ServiceType, out var serviceType))
+            return BadRequest($"Invalid serviceType: {req.ServiceType}");
 
         if (await db.AiConnections.AnyAsync(c => c.Name == req.Name, ct))
             return Conflict($"Connection '{req.Name}' already exists");
 
         var connection = new AiConnection
         {
+            ServiceType = serviceType,
             Name = req.Name.Trim(),
             Endpoint = req.Endpoint.Trim(),
             ApiKey = req.ApiKey ?? string.Empty
         };
         db.AiConnections.Add(connection);
         await db.SaveChangesAsync(ct);
-        return Ok(new { connection.Id, connection.Name, connection.Endpoint, HasKey = !string.IsNullOrEmpty(connection.ApiKey) });
+        return Ok(new { connection.Id, ServiceType = connection.ServiceType.ToString(), connection.Name, connection.Endpoint, HasKey = !string.IsNullOrEmpty(connection.ApiKey) });
     }
 
     [HttpPut("connections/{id:int}")]
@@ -58,7 +57,7 @@ public class ProvidersController(AppDbContext db) : ControllerBase
         if (req.ApiKey is not null) connection.ApiKey = req.ApiKey;
 
         await db.SaveChangesAsync(ct);
-        return Ok(new { connection.Id, connection.Name, connection.Endpoint, HasKey = !string.IsNullOrEmpty(connection.ApiKey) });
+        return Ok(new { connection.Id, ServiceType = connection.ServiceType.ToString(), connection.Name, connection.Endpoint, HasKey = !string.IsNullOrEmpty(connection.ApiKey) });
     }
 
     [HttpDelete("connections/{id:int}")]
@@ -175,6 +174,6 @@ public class ProvidersController(AppDbContext db) : ControllerBase
     }
 }
 
-public record ConnectionRequest(string Name, string Endpoint, string? ApiKey);
+public record ConnectionRequest(string ServiceType, string Name, string Endpoint, string? ApiKey);
 public record ProviderConfigRequest(string ServiceType, int ConnectionId, string? DeploymentName, string? OutputFormat, string? AnalysisModel, bool IsEnabled);
 public record ReorderRequest(string ServiceType, List<int> Ids);

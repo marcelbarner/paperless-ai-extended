@@ -47,6 +47,7 @@ export const USER_PROMPT_KEY = 'AI:UserPromptTemplate';
 
 export interface AiConnection {
   id: number;
+  serviceType: 'OpenAI' | 'DocumentIntelligence';
   name: string;
   endpoint: string;
   hasKey: boolean;
@@ -153,8 +154,8 @@ export class ApiService {
     return this.http.get<AiConnection[]>(`${this.base}/providers/connections`);
   }
 
-  createConnection(name: string, endpoint: string, apiKey: string): Observable<AiConnection> {
-    return this.http.post<AiConnection>(`${this.base}/providers/connections`, { name, endpoint, apiKey });
+  createConnection(serviceType: string, name: string, endpoint: string, apiKey: string): Observable<AiConnection> {
+    return this.http.post<AiConnection>(`${this.base}/providers/connections`, { serviceType, name, endpoint, apiKey });
   }
 
   updateConnection(id: number, name: string, endpoint: string, apiKey?: string): Observable<AiConnection> {
