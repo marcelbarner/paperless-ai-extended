@@ -7,7 +7,7 @@ export interface ProcessingJob {
   documentId: number;
   documentTitle: string;
   jobType: 'Ocr' | 'Ai' | 'Both';
-  status: 'Pending' | 'Processing' | 'Done' | 'Failed';
+  status: 'Pending' | 'Processing' | 'Done' | 'Failed' | 'Cancelled';
   createdAt: string;
   updatedAt: string;
   resultJson: string | null;
@@ -80,6 +80,14 @@ export class ApiService {
 
   batchRetry(ids: number[]): Observable<{ retried: number }> {
     return this.http.post<{ retried: number }>(`${this.base}/queue/jobs/batch-retry`, ids);
+  }
+
+  batchCancel(ids: number[]): Observable<{ cancelled: number }> {
+    return this.http.post<{ cancelled: number }>(`${this.base}/queue/jobs/batch-cancel`, ids);
+  }
+
+  batchDelete(ids: number[]): Observable<{ deleted: number }> {
+    return this.http.delete<{ deleted: number }>(`${this.base}/queue/jobs/batch`, { body: ids });
   }
 
   getJobStats(): Observable<JobStat[]> {

@@ -58,6 +58,14 @@ public class DocumentProcessingWorker(
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var current = await db.ProcessingJobs.FindAsync([job.Id], ct);
+        if (current is null || current.Status == JobStatus.Cancelled)
+        {
+            logger.LogInformation("Job #{Id} übersprungen (abgebrochen oder gelöscht)", job.Id);
+            return;
+        }
+
         var paperless = scope.ServiceProvider.GetRequiredService<PaperlessClient>();
         var docIntel = scope.ServiceProvider.GetRequiredService<DocumentIntelligenceService>();
         var openAi = scope.ServiceProvider.GetRequiredService<OpenAIService>();

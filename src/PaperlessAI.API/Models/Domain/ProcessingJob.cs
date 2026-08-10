@@ -15,4 +15,4 @@ public class ProcessingJob
 
 // Both bleibt für Rückwärtskompatibilität mit bestehenden DB-Einträgen
 public enum JobType { Ocr, Ai, Both }
-public enum JobStatus { Pending, Processing, Done, Failed }
+public enum JobStatus { Pending, Processing, Done, Failed, Cancelled }

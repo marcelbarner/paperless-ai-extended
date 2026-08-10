@@ -43,6 +43,14 @@
         <div class="stat-label">Fehlgeschlagen</div>
       </mat-card-content>
     </mat-card>
+    @if (statCount('Cancelled') > 0) {
+      <mat-card class="stat-card" (click)="onFilterChange('Cancelled')" [class.active]="statusFilter() === 'Cancelled'">
+        <mat-card-content>
+          <div class="stat-value">{{ statCount('Cancelled') }}</div>
+          <div class="stat-label">Abgebrochen</div>
+        </mat-card-content>
+      </mat-card>
+    }
   </div>
 
   <!-- Queue-Tabelle -->
@@ -65,6 +73,7 @@
             <mat-option value="Processing">In Bearbeitung</mat-option>
             <mat-option value="Done">Abgeschlossen</mat-option>
             <mat-option value="Failed">Fehlgeschlagen</mat-option>
+            <mat-option value="Cancelled">Abgebrochen</mat-option>
           </mat-select>
         </mat-form-field>
         @if (selectedFailedIds().length > 0) {
@@ -72,6 +81,20 @@
             matTooltip="{{ selectedFailedIds().length }} fehlgeschlagene Job(s) erneut starten">
             <mat-icon>replay</mat-icon>
             Retry ({{ selectedFailedIds().length }})
+          </button>
+        }
+        @if (selectedCancellableIds().length > 0) {
+          <button mat-stroked-button (click)="batchCancel()"
+            matTooltip="{{ selectedCancellableIds().length }} ausstehende/aktive Job(s) abbrechen">
+            <mat-icon>cancel</mat-icon>
+            Abbrechen ({{ selectedCancellableIds().length }})
+          </button>
+        }
+        @if (selectedAnyIds().length > 0) {
+          <button mat-stroked-button color="warn" (click)="batchDelete()"
+            matTooltip="{{ selectedAnyIds().length }} Job(s) dauerhaft löschen">
+            <mat-icon>delete</mat-icon>
+            Löschen ({{ selectedAnyIds().length }})
           </button>
         }
         <button mat-icon-button (click)="load()" matTooltip="Aktualisieren">

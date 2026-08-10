@@ -66,6 +66,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .map(j => j.id);
   });
 
+  selectedCancellableIds = computed(() => {
+    const ids = this.selectedIds();
+    return this.jobs()
+      .filter(j => (j.status === 'Pending' || j.status === 'Processing') && ids.has(j.id))
+      .map(j => j.id);
+  });
+
+  selectedAnyIds = computed(() => {
+    const ids = this.selectedIds();
+    return this.jobs().filter(j => ids.has(j.id)).map(j => j.id);
+  });
+
   allOnPageSelected = computed(() => {
     const ids = this.selectedIds();
     const visible = this.jobs();
@@ -151,6 +163,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.api.batchRetry(ids).subscribe(() => this.load());
   }
 
+  batchCancel() {
+    const ids = this.selectedCancellableIds();
+    if (ids.length === 0) return;
+    this.api.batchCancel(ids).subscribe(() => this.load());
+  }
+
+  batchDelete() {
+    const ids = this.selectedAnyIds();
+    if (ids.length === 0) return;
+    this.api.batchDelete(ids).subscribe(() => this.load());
+  }
+
   togglePolling(enabled: boolean) {
     this.togglingPolling.set(true);
     this.api.saveSettings({ 'Polling:Enabled': enabled ? 'true' : 'false' }).subscribe({
@@ -183,6 +207,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   statusColor(status: string): string {
-    return ({ Pending: 'accent', Processing: 'primary', Done: '', Failed: 'warn' } as Record<string, string>)[status] ?? '';
+    return ({ Pending: 'accent', Processing: 'primary', Done: '', Failed: 'warn', Cancelled: '' } as Record<string, string>)[status] ?? '';
   }
 }

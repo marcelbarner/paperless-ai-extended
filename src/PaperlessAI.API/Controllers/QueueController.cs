@@ -67,6 +67,41 @@ public class QueueController(AppDbContext db, DocumentProcessingChannel channel)
         return Ok(new { retried = jobs.Count });
     }
 
+    [HttpPost("jobs/batch-cancel")]
+    public async Task<IActionResult> BatchCancel(
+        [FromBody] List<int> ids, CancellationToken ct)
+    {
+        if (ids is not { Count: > 0 }) return BadRequest("No job IDs provided");
+
+        var cancellable = new[] { JobStatus.Pending, JobStatus.Processing };
+        var jobs = await db.ProcessingJobs
+            .Where(j => ids.Contains(j.Id) && cancellable.Contains(j.Status))
+            .ToListAsync(ct);
+
+        foreach (var job in jobs)
+        {
+            job.Status = JobStatus.Cancelled;
+            job.UpdatedAt = DateTime.UtcNow;
+        }
+        await db.SaveChangesAsync(ct);
+        return Ok(new { cancelled = jobs.Count });
+    }
+
+    [HttpDelete("jobs/batch")]
+    public async Task<IActionResult> BatchDelete(
+        [FromBody] List<int> ids, CancellationToken ct)
+    {
+        if (ids is not { Count: > 0 }) return BadRequest("No job IDs provided");
+
+        var jobs = await db.ProcessingJobs
+            .Where(j => ids.Contains(j.Id))
+            .ToListAsync(ct);
+
+        db.ProcessingJobs.RemoveRange(jobs);
+        await db.SaveChangesAsync(ct);
+        return Ok(new { deleted = jobs.Count });
+    }
+
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats(CancellationToken ct)
     {
