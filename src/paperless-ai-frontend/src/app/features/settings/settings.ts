@@ -11,6 +11,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatChipsModule } from '@angular/material/chips';
 import { ApiService, SYSTEM_PROMPT_KEY, USER_PROMPT_KEY, AiConnection, AiProviderConfig } from '../../core/services/api';
 
 interface SettingOption { value: string; label: string; }
@@ -120,7 +121,8 @@ const TOGGLE_FIELDS: SettingField[] = [
     MatSlideToggleModule,
     MatSnackBarModule,
     MatTooltipModule,
-    MatDividerModule
+    MatDividerModule,
+    MatChipsModule
   ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss'
