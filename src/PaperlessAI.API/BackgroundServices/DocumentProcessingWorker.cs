@@ -19,25 +19,55 @@ public class DocumentProcessingWorker(
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public const string MaxParallelOcrKey = "Processing:MaxParallelOcr";
-    public const string MaxParallelAiKey = "Processing:MaxParallelAi";
+    public const string MaxParallelOcrKey   = "Processing:MaxParallelOcr";
+    public const string MaxParallelAiKey    = "Processing:MaxParallelAi";
     public const string MaxParallelTotalKey = "Processing:MaxParallelTotal";
+
+    private int _activeOcr   = 0;
+    private int _activeAi    = 0;
+    private int _activeTotal = 0;
+    private readonly object _slotLock = new();
+
+    private int MaxOcr   => int.TryParse(settings.Get(MaxParallelOcrKey),   out var v) ? Math.Max(1, v) : 1;
+    private int MaxAi    => int.TryParse(settings.Get(MaxParallelAiKey),    out var v) ? Math.Max(1, v) : 1;
+    private int MaxTotal => int.TryParse(settings.Get(MaxParallelTotalKey), out var v) ? Math.Max(1, v) : 2;
+
+    private async Task WaitAndAcquireSlotAsync(JobType jobType, CancellationToken ct)
+    {
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            lock (_slotLock)
+            {
+                var typeCount = jobType == JobType.Ai ? _activeAi : _activeOcr;
+                var typeMax   = jobType == JobType.Ai ? MaxAi : MaxOcr;
+                if (_activeTotal < MaxTotal && typeCount < typeMax)
+                {
+                    _activeTotal++;
+                    if (jobType == JobType.Ai) _activeAi++; else _activeOcr++;
+                    return;
+                }
+            }
+            await Task.Delay(500, ct);
+        }
+    }
+
+    private void ReleaseSlot(JobType jobType)
+    {
+        lock (_slotLock)
+        {
+            _activeTotal--;
+            if (jobType == JobType.Ai) _activeAi--; else _activeOcr--;
+        }
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await RecoverPendingJobsAsync(stoppingToken);
 
-        var maxOcr   = int.TryParse(settings.Get(MaxParallelOcrKey),   out var o) ? Math.Max(1, o) : 1;
-        var maxAi    = int.TryParse(settings.Get(MaxParallelAiKey),    out var a) ? Math.Max(1, a) : 1;
-        var maxTotal = int.TryParse(settings.Get(MaxParallelTotalKey), out var t) ? Math.Max(1, t) : 2;
-
-        using var ocrSemaphore   = new SemaphoreSlim(maxOcr,   maxOcr);
-        using var aiSemaphore    = new SemaphoreSlim(maxAi,    maxAi);
-        using var totalSemaphore = new SemaphoreSlim(maxTotal, maxTotal);
-
         logger.LogInformation(
             "Parallelverarbeitung gestartet — OCR: {Ocr}, AI: {Ai}, Gesamt: {Total}",
-            maxOcr, maxAi, maxTotal);
+            MaxOcr, MaxAi, MaxTotal);
 
         var activeTasks = new List<Task>();
 
@@ -45,16 +75,14 @@ public class DocumentProcessingWorker(
         {
             activeTasks.RemoveAll(t => t.IsCompleted);
 
-            var typeSem = job.JobType == JobType.Ai ? aiSemaphore : ocrSemaphore;
-            await totalSemaphore.WaitAsync(stoppingToken);
-            await typeSem.WaitAsync(stoppingToken);
+            await WaitAndAcquireSlotAsync(job.JobType, stoppingToken);
 
-            var capturedJob = job;
-            var capturedTypeSem = typeSem;
+            var capturedJob  = job;
+            var capturedType = job.JobType;
             activeTasks.Add(Task.Run(async () =>
             {
                 try { await ProcessJobAsync(capturedJob, stoppingToken); }
-                finally { capturedTypeSem.Release(); totalSemaphore.Release(); }
+                finally { ReleaseSlot(capturedType); }
             }, stoppingToken));
         }
 
