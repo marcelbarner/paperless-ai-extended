@@ -67,10 +67,10 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api';
 
-  getJobs(status?: string, page = 1, pageSize = 20, jobTypes?: string[], sortBy?: string, sortDir?: string): Observable<JobsPage> {
-    let params = new HttpParams()
-      .set('page', page)
-      .set('pageSize', pageSize);
+  getJobs(status?: string, page?: number, pageSize?: number, jobTypes?: string[], sortBy?: string, sortDir?: string): Observable<JobsPage> {
+    let params = new HttpParams();
+    if (page != null) params = params.set('page', page);
+    if (pageSize != null) params = params.set('pageSize', pageSize);
     if (status) params = params.set('status', status);
     for (const t of jobTypes ?? []) params = params.append('jobType', t);
     if (sortBy) params = params.set('sortBy', sortBy);
@@ -88,6 +88,26 @@ export class ApiService {
 
   batchDelete(ids: number[]): Observable<{ deleted: number }> {
     return this.http.delete<{ deleted: number }>(`${this.base}/queue/jobs/batch`, { body: ids });
+  }
+
+  cancelAll(jobTypes?: string[], statuses?: string[]): Observable<{ cancelled: number }> {
+    let params = new HttpParams();
+    for (const t of jobTypes ?? []) params = params.append('jobType', t);
+    for (const s of statuses ?? []) params = params.append('status', s);
+    return this.http.post<{ cancelled: number }>(`${this.base}/queue/jobs/cancel-all`, null, { params });
+  }
+
+  deleteAll(jobTypes?: string[], statuses?: string[]): Observable<{ deleted: number }> {
+    let params = new HttpParams();
+    for (const t of jobTypes ?? []) params = params.append('jobType', t);
+    for (const s of statuses ?? []) params = params.append('status', s);
+    return this.http.delete<{ deleted: number }>(`${this.base}/queue/jobs/all`, { params });
+  }
+
+  retryAll(jobTypes?: string[]): Observable<{ retried: number }> {
+    let params = new HttpParams();
+    for (const t of jobTypes ?? []) params = params.append('jobType', t);
+    return this.http.post<{ retried: number }>(`${this.base}/queue/jobs/retry-all`, null, { params });
   }
 
   getJobStats(): Observable<JobStat[]> {

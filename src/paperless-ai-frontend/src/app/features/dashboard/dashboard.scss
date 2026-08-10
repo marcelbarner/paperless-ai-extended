@@ -69,3 +69,18 @@
   cursor: pointer;
   &:hover { background: rgba(0,0,0,.04); }
 }
+
+.paginator-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.show-all-hint {
+  font-size: 13px;
+  color: rgba(0,0,0,.54);
+  padding: 0 8px;
+}

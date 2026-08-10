@@ -97,6 +97,21 @@
             Löschen ({{ selectedAnyIds().length }})
           </button>
         }
+        <button mat-stroked-button (click)="cancelAll()"
+          matTooltip="Alle Pending/Processing Jobs mit aktiven Filtern abbrechen">
+          <mat-icon>cancel</mat-icon>
+          Alle abbrechen
+        </button>
+        <button mat-stroked-button color="warn" (click)="deleteAll()"
+          matTooltip="Alle Jobs mit aktiven Filtern löschen">
+          <mat-icon>delete_sweep</mat-icon>
+          Alle löschen
+        </button>
+        <button mat-stroked-button (click)="retryAll()"
+          matTooltip="Alle fehlgeschlagenen Jobs mit aktivem Typ-Filter erneut starten">
+          <mat-icon>replay</mat-icon>
+          Alle retry
+        </button>
         <button mat-icon-button (click)="load()" matTooltip="Aktualisieren">
           <mat-icon>refresh</mat-icon>
         </button>
@@ -188,14 +203,26 @@
           </tr>
         </table>
 
-        <mat-paginator
-          [length]="total()"
-          [pageSize]="pageSize()"
-          [pageIndex]="page() - 1"
-          [pageSizeOptions]="[10, 20, 50, 100]"
-          (page)="onPage($event)"
-          showFirstLastButtons>
-        </mat-paginator>
+        <div class="paginator-row">
+          @if (!showAll()) {
+            <mat-paginator
+              [length]="total()"
+              [pageSize]="pageSize()"
+              [pageIndex]="page() - 1"
+              [pageSizeOptions]="[10, 20, 50, 100]"
+              (page)="onPage($event)"
+              showFirstLastButtons>
+            </mat-paginator>
+          } @else {
+            <span class="show-all-hint">{{ total() }} Einträge werden angezeigt</span>
+          }
+          <button mat-stroked-button (click)="toggleShowAll()"
+            [color]="showAll() ? 'primary' : ''"
+            matTooltip="{{ showAll() ? 'Zur seitenweisen Ansicht wechseln' : 'Alle Einträge laden (kein Paging)' }}">
+            <mat-icon>{{ showAll() ? 'view_list' : 'select_all' }}</mat-icon>
+            {{ showAll() ? 'Seitenweise' : 'Alle anzeigen' }}
+          </button>
+        </div>
       }
     </mat-card-content>
   </mat-card>

@@ -54,6 +54,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   jobTypeFilter = signal<string[]>([]);
   sortBy = signal('updatedAt');
   sortDir = signal<'asc' | 'desc'>('desc');
+  showAll = signal(false);
   selectedIds = signal<Set<number>>(new Set());
   paperlessUrl = signal('http://localhost:8000');
   pollingEnabled = signal(true);
@@ -103,13 +104,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   load() {
     const filter = this.statusFilter() || undefined;
     const jobTypes = this.jobTypeFilter().length > 0 ? this.jobTypeFilter() : undefined;
-    this.api.getJobs(filter, this.page(), this.pageSize(), jobTypes, this.sortBy(), this.sortDir()).subscribe(p => {
+    const [page, pageSize] = this.showAll() ? [undefined, undefined] : [this.page(), this.pageSize()];
+    this.api.getJobs(filter, page, pageSize, jobTypes, this.sortBy(), this.sortDir()).subscribe(p => {
       this.jobs.set(p.jobs);
       this.total.set(p.total);
       this.loading.set(false);
       this.selectedIds.set(new Set());
     });
     this.api.getJobStats().subscribe(stats => this.stats.set(stats));
+  }
+
+  toggleShowAll() {
+    this.showAll.update(v => !v);
+    this.page.set(1);
+    this.load();
   }
 
   onFilterChange(status: string) {
@@ -173,6 +181,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const ids = this.selectedAnyIds();
     if (ids.length === 0) return;
     this.api.batchDelete(ids).subscribe(() => this.load());
+  }
+
+  cancelAll() {
+    const jobTypes = this.jobTypeFilter().length > 0 ? this.jobTypeFilter() : undefined;
+    const status = this.statusFilter() ? [this.statusFilter()] : undefined;
+    this.api.cancelAll(jobTypes, status).subscribe(() => this.load());
+  }
+
+  deleteAll() {
+    const jobTypes = this.jobTypeFilter().length > 0 ? this.jobTypeFilter() : undefined;
+    const status = this.statusFilter() ? [this.statusFilter()] : undefined;
+    this.api.deleteAll(jobTypes, status).subscribe(() => this.load());
+  }
+
+  retryAll() {
+    const jobTypes = this.jobTypeFilter().length > 0 ? this.jobTypeFilter() : undefined;
+    this.api.retryAll(jobTypes).subscribe(() => this.load());
   }
 
   togglePolling(enabled: boolean) {

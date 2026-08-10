@@ -16,8 +16,8 @@ public class QueueController(AppDbContext db, DocumentProcessingChannel channel)
         [FromQuery] JobType[]? jobType,
         [FromQuery] string? sortBy,
         [FromQuery] string? sortDir,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
         CancellationToken ct = default)
     {
         var query = db.ProcessingJobs.AsQueryable();
@@ -35,12 +35,59 @@ public class QueueController(AppDbContext db, DocumentProcessingChannel channel)
         };
 
         var total = await query.CountAsync(ct);
-        var jobs = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
+        var jobs = page.HasValue && pageSize.HasValue
+            ? await query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToListAsync(ct)
+            : await query.ToListAsync(ct);
 
         return Ok(new { total, page, pageSize, jobs });
+    }
+
+    [HttpPost("jobs/cancel-all")]
+    public async Task<IActionResult> CancelAll(
+        [FromQuery] JobType[]? jobType,
+        [FromQuery] JobStatus[]? status,
+        CancellationToken ct)
+    {
+        var cancellable = new[] { JobStatus.Pending, JobStatus.Processing };
+        var query = db.ProcessingJobs.Where(j => cancellable.Contains(j.Status));
+        if (jobType is { Length: > 0 }) query = query.Where(j => jobType.Contains(j.JobType));
+        if (status is { Length: > 0 }) query = query.Where(j => status.Contains(j.Status));
+
+        var jobs = await query.ToListAsync(ct);
+        foreach (var job in jobs) { job.Status = JobStatus.Cancelled; job.UpdatedAt = DateTime.UtcNow; }
+        await db.SaveChangesAsync(ct);
+        return Ok(new { cancelled = jobs.Count });
+    }
+
+    [HttpDelete("jobs/all")]
+    public async Task<IActionResult> DeleteAll(
+        [FromQuery] JobType[]? jobType,
+        [FromQuery] JobStatus[]? status,
+        CancellationToken ct)
+    {
+        var query = db.ProcessingJobs.AsQueryable();
+        if (jobType is { Length: > 0 }) query = query.Where(j => jobType.Contains(j.JobType));
+        if (status is { Length: > 0 }) query = query.Where(j => status.Contains(j.Status));
+
+        var jobs = await query.ToListAsync(ct);
+        db.ProcessingJobs.RemoveRange(jobs);
+        await db.SaveChangesAsync(ct);
+        return Ok(new { deleted = jobs.Count });
+    }
+
+    [HttpPost("jobs/retry-all")]
+    public async Task<IActionResult> RetryAll(
+        [FromQuery] JobType[]? jobType,
+        CancellationToken ct)
+    {
+        var query = db.ProcessingJobs.Where(j => j.Status == JobStatus.Failed);
+        if (jobType is { Length: > 0 }) query = query.Where(j => jobType.Contains(j.JobType));
+
+        var jobs = await query.ToListAsync(ct);
+        foreach (var job in jobs) { job.Status = JobStatus.Pending; job.Error = null; job.UpdatedAt = DateTime.UtcNow; }
+        await db.SaveChangesAsync(ct);
+        foreach (var job in jobs) await channel.Writer.WriteAsync(job, ct);
+        return Ok(new { retried = jobs.Count });
     }
 
     [HttpPost("jobs/batch-retry")]
