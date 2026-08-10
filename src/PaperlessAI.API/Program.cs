@@ -22,7 +22,11 @@ builder.Services.AddSingleton<AppSettingsService>();
 builder.Services.AddTransient<DetailedHttpErrorHandler>();
 builder.Services.AddHttpClient("paperless")
     .AddHttpMessageHandler<DetailedHttpErrorHandler>()
-    .AddStandardResilienceHandler();
+    .AddStandardResilienceHandler(options =>
+    {
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
+        options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);
+    });
 builder.Services.AddScoped<PaperlessClient>();
 
 // Azure services — scoped so AppDbContext (provider resolution) is available
