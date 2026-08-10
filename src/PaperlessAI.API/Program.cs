@@ -24,8 +24,17 @@ builder.Services.AddHttpClient("paperless")
     .AddHttpMessageHandler<DetailedHttpErrorHandler>()
     .AddStandardResilienceHandler(options =>
     {
-        options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
+        // TotalRequestTimeout must be strictly > AttemptTimeout
         options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(3);
+
+        // SamplingDuration must be >= 2× AttemptTimeout (min 4min)
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(5);
+        // Lower threshold: at 2min/request, default of 100 would take hours to open
+        options.CircuitBreaker.MinimumThroughput = 3;
+
+        // Reduce retries: 3 retries × 2min each would exceed TotalRequestTimeout
+        options.Retry.MaxRetryAttempts = 1;
     });
 builder.Services.AddScoped<PaperlessClient>();
 
