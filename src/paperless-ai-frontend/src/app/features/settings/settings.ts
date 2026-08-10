@@ -167,6 +167,9 @@ export class SettingsComponent implements OnInit {
   newOpenAiConfig = signal({ connectionId: 0, deploymentName: '' });
   newDocIntelConfig = signal({ connectionId: 0, outputFormat: 'text', analysisModel: 'auto' });
 
+  editingConfigId = signal<number | null>(null);
+  editingConfig = signal<{ connectionId: number; deploymentName: string; outputFormat: string; analysisModel: string; isEnabled: boolean } | null>(null);
+
   readonly outputFormatOptions = [
     { value: 'text', label: 'Text' },
     { value: 'markdown', label: 'Markdown' }
@@ -278,6 +281,39 @@ export class SettingsComponent implements OnInit {
       this.newDocIntelConfig.set({ connectionId: 0, outputFormat: 'text', analysisModel: 'auto' });
       this.loadProviders();
     });
+  }
+
+  startEditConfig(cfg: AiProviderConfig) {
+    this.editingConfigId.set(cfg.id);
+    this.editingConfig.set({
+      connectionId: cfg.connectionId,
+      deploymentName: cfg.deploymentName ?? '',
+      outputFormat: cfg.outputFormat ?? 'text',
+      analysisModel: cfg.analysisModel ?? 'auto',
+      isEnabled: cfg.isEnabled
+    });
+  }
+
+  saveConfig() {
+    const id = this.editingConfigId();
+    const ec = this.editingConfig();
+    if (id === null || !ec) return;
+    this.api.updateProviderConfig(id, {
+      connectionId: ec.connectionId,
+      deploymentName: ec.deploymentName || null,
+      outputFormat: ec.outputFormat,
+      analysisModel: ec.analysisModel,
+      isEnabled: ec.isEnabled
+    }).subscribe(() => {
+      this.editingConfigId.set(null);
+      this.editingConfig.set(null);
+      this.loadProviders();
+    });
+  }
+
+  cancelEditConfig() {
+    this.editingConfigId.set(null);
+    this.editingConfig.set(null);
   }
 
   toggleConfig(config: AiProviderConfig) {

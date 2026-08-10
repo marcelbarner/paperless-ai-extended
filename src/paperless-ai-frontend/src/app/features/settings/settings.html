@@ -167,7 +167,7 @@
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>Prioritätsliste</mat-card-title>
-            <mat-card-subtitle>Per Drag &amp; Drop sortieren — von links (höchste) nach rechts (niedrigste) Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
+            <mat-card-subtitle>Per Drag &amp; Drop sortieren — oben = höchste Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="prio-list" cdkDropList (cdkDropListDropped)="dropOpenAi($event)">
@@ -178,16 +178,37 @@
                 <span class="col-actions"></span>
               </div>
               @for (cfg of openAiConfigs(); track cfg.id) {
-                <div class="prio-row" cdkDrag [class.disabled-row]="!cfg.isEnabled">
-                  <div cdkDragHandle class="col-drag"><mat-icon class="drag-icon">drag_indicator</mat-icon></div>
-                  <span class="col-service">{{ cfg.connectionName }}</span>
-                  <span class="col-deployment">{{ cfg.deploymentName || '(Standard)' }}</span>
-                  <div class="col-actions">
-                    <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
-                    <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen"><mat-icon>delete</mat-icon></button>
+                @if (editingConfigId() === cfg.id && editingConfig(); as ec) {
+                  <div class="prio-row prio-row-editing">
+                    <div class="col-drag"></div>
+                    <div class="col-service">
+                      <mat-select [value]="ec.connectionId" (selectionChange)="editingConfig.update(e => e && ({...e, connectionId: $event.value}))">
+                        @for (c of connections(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
+                      </mat-select>
+                    </div>
+                    <div class="col-deployment">
+                      <input class="inline-input" [value]="ec.deploymentName"
+                        (input)="editingConfig.update(e => e && ({...e, deploymentName: $any($event.target).value}))"
+                        placeholder="z.B. gpt-4o" />
+                    </div>
+                    <div class="col-actions">
+                      <button mat-icon-button color="primary" (click)="saveConfig()" matTooltip="Speichern"><mat-icon>check</mat-icon></button>
+                      <button mat-icon-button (click)="cancelEditConfig()" matTooltip="Abbrechen"><mat-icon>close</mat-icon></button>
+                    </div>
                   </div>
-                  <div *cdkDragPlaceholder class="prio-row-placeholder"></div>
-                </div>
+                } @else {
+                  <div class="prio-row" cdkDrag [class.disabled-row]="!cfg.isEnabled">
+                    <div cdkDragHandle class="col-drag"><mat-icon class="drag-icon">drag_indicator</mat-icon></div>
+                    <span class="col-service">{{ cfg.connectionName }}</span>
+                    <span class="col-deployment">{{ cfg.deploymentName || '(Standard)' }}</span>
+                    <div class="col-actions">
+                      <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
+                      <button mat-icon-button (click)="startEditConfig(cfg)" matTooltip="Bearbeiten"><mat-icon>edit</mat-icon></button>
+                      <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen"><mat-icon>delete</mat-icon></button>
+                    </div>
+                    <div *cdkDragPlaceholder class="prio-row-placeholder"></div>
+                  </div>
+                }
               }
               @if (openAiConfigs().length === 0) {
                 <div class="prio-empty">Noch keine Einträge – Service auswählen und hinzufügen</div>
@@ -287,7 +308,7 @@
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>Prioritätsliste</mat-card-title>
-            <mat-card-subtitle>Per Drag &amp; Drop sortieren — von links (höchste) nach rechts (niedrigste) Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
+            <mat-card-subtitle>Per Drag &amp; Drop sortieren — oben = höchste Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="prio-list" cdkDropList (cdkDropListDropped)="dropDocIntel($event)">
@@ -299,17 +320,43 @@
                 <span class="col-actions"></span>
               </div>
               @for (cfg of docIntelConfigs(); track cfg.id) {
-                <div class="prio-row" cdkDrag [class.disabled-row]="!cfg.isEnabled">
-                  <div cdkDragHandle class="col-drag"><mat-icon class="drag-icon">drag_indicator</mat-icon></div>
-                  <span class="col-service">{{ cfg.connectionName }}</span>
-                  <span class="col-format">{{ cfg.outputFormat || 'text' }}</span>
-                  <span class="col-model">{{ cfg.analysisModel || 'auto' }}</span>
-                  <div class="col-actions">
-                    <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
-                    <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen"><mat-icon>delete</mat-icon></button>
+                @if (editingConfigId() === cfg.id && editingConfig(); as ec) {
+                  <div class="prio-row prio-row-editing">
+                    <div class="col-drag"></div>
+                    <div class="col-service">
+                      <mat-select [value]="ec.connectionId" (selectionChange)="editingConfig.update(e => e && ({...e, connectionId: $event.value}))">
+                        @for (c of connections(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
+                      </mat-select>
+                    </div>
+                    <div class="col-format">
+                      <mat-select [value]="ec.outputFormat" (selectionChange)="editingConfig.update(e => e && ({...e, outputFormat: $event.value}))">
+                        @for (o of outputFormatOptions; track o.value) { <mat-option [value]="o.value">{{ o.label }}</mat-option> }
+                      </mat-select>
+                    </div>
+                    <div class="col-model">
+                      <mat-select [value]="ec.analysisModel" (selectionChange)="editingConfig.update(e => e && ({...e, analysisModel: $event.value}))">
+                        @for (m of analysisModelOptions; track m.value) { <mat-option [value]="m.value">{{ m.label }}</mat-option> }
+                      </mat-select>
+                    </div>
+                    <div class="col-actions">
+                      <button mat-icon-button color="primary" (click)="saveConfig()" matTooltip="Speichern"><mat-icon>check</mat-icon></button>
+                      <button mat-icon-button (click)="cancelEditConfig()" matTooltip="Abbrechen"><mat-icon>close</mat-icon></button>
+                    </div>
                   </div>
-                  <div *cdkDragPlaceholder class="prio-row-placeholder"></div>
-                </div>
+                } @else {
+                  <div class="prio-row" cdkDrag [class.disabled-row]="!cfg.isEnabled">
+                    <div cdkDragHandle class="col-drag"><mat-icon class="drag-icon">drag_indicator</mat-icon></div>
+                    <span class="col-service">{{ cfg.connectionName }}</span>
+                    <span class="col-format">{{ cfg.outputFormat || 'text' }}</span>
+                    <span class="col-model">{{ cfg.analysisModel || 'auto' }}</span>
+                    <div class="col-actions">
+                      <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
+                      <button mat-icon-button (click)="startEditConfig(cfg)" matTooltip="Bearbeiten"><mat-icon>edit</mat-icon></button>
+                      <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen"><mat-icon>delete</mat-icon></button>
+                    </div>
+                    <div *cdkDragPlaceholder class="prio-row-placeholder"></div>
+                  </div>
+                }
               }
               @if (docIntelConfigs().length === 0) {
                 <div class="prio-empty">Noch keine Einträge – Service auswählen und hinzufügen</div>
