@@ -9,38 +9,27 @@
 
   <mat-tab-group>
 
-    <!-- Tab 1: Verbindungen & Credentials -->
-    <mat-tab label="Verbindungen">
+    <!-- ── Tab 1: Allgemein ──────────────────────────────────────────────── -->
+    <mat-tab label="Allgemein">
       <div class="tab-content">
-        @for (section of sections; track section.title) {
-          <mat-card class="settings-card">
-            <mat-card-header>
-              <mat-card-title>{{ section.title }}</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              @for (field of section.fields; track field.key) {
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>{{ field.label }}</mat-label>
-                  @if (field.type === 'select') {
-                    <mat-select [value]="getValue(field.key)"
-                      (selectionChange)="setValue(field.key, $event.value)">
-                      @for (opt of field.options ?? []; track opt.value) {
-                        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                      }
-                    </mat-select>
-                  } @else {
-                    <input matInput [type]="field.type ?? 'text'"
-                      [value]="getValue(field.key)"
-                      (input)="setValue(field.key, $any($event.target).value)" />
-                  }
-                  @if (field.hint) { <mat-hint>{{ field.hint }}</mat-hint> }
-                </mat-form-field>
-              }
-            </mat-card-content>
-          </mat-card>
-        }
 
-        <!-- Verarbeitungs-Steuerung -->
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>Paperless-NGX</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @for (field of paperlessFields; track field.key) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>{{ field.label }}</mat-label>
+                <input matInput [type]="field.type ?? 'text'"
+                  [value]="getValue(field.key)"
+                  (input)="setValue(field.key, $any($event.target).value)" />
+                @if (field.hint) { <mat-hint>{{ field.hint }}</mat-hint> }
+              </mat-form-field>
+            }
+          </mat-card-content>
+        </mat-card>
+
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>Verarbeitungs-Steuerung</mat-card-title>
@@ -55,34 +44,7 @@
                   <span>{{ field.label }}</span>
                   @if (field.hint) { <small>{{ field.hint }}</small> }
                 </div>
-                <mat-slide-toggle
-                  [checked]="isTrue(field.key)"
-                  (change)="setToggle(field.key, $event.checked)">
-                </mat-slide-toggle>
-              </div>
-              <mat-divider></mat-divider>
-            }
-          </mat-card-content>
-        </mat-card>
-
-        <!-- KI-Anlegen-Berechtigungen -->
-        <mat-card class="settings-card">
-          <mat-card-header>
-            <mat-card-title>KI-Anlegen-Berechtigungen</mat-card-title>
-            <mat-card-subtitle>
-              Steuere welche Entitäten die KI neu in Paperless anlegen darf, wenn kein passender Eintrag vorhanden ist.
-            </mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            @for (field of toggleFields; track field.key) {
-              <div class="toggle-row">
-                <div class="toggle-label">
-                  <span>{{ field.label }}</span>
-                  @if (field.hint) { <small>{{ field.hint }}</small> }
-                </div>
-                <mat-slide-toggle
-                  [checked]="isTrue(field.key)"
-                  (change)="setToggle(field.key, $event.checked)">
+                <mat-slide-toggle [checked]="isTrue(field.key)" (change)="setToggle(field.key, $event.checked)">
                 </mat-slide-toggle>
               </div>
               <mat-divider></mat-divider>
@@ -93,18 +55,14 @@
       </div>
     </mat-tab>
 
-    <!-- Tab 2: Fallback-Provider -->
-    <mat-tab label="Fallback-Provider">
+    <!-- ── Tab 2: Azure OpenAI ───────────────────────────────────────────── -->
+    <mat-tab label="Azure OpenAI">
       <div class="tab-content">
 
-        <!-- ── Azure OpenAI ─────────────────────────────────────────────── -->
-        <h2 class="provider-section-title">Azure OpenAI</h2>
-
-        <!-- OpenAI Services -->
         <mat-card class="settings-card">
           <mat-card-header>
-            <mat-card-title>Services</mat-card-title>
-            <mat-card-subtitle>Benannte Verbindungen mit Endpoint + API Key</mat-card-subtitle>
+            <mat-card-title>Verbindungen</mat-card-title>
+            <mat-card-subtitle>Benannte Services mit Endpoint + API Key</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @for (conn of connections(); track conn.id) {
@@ -156,18 +114,17 @@
                   (input)="newOpenAiConn.update(c => ({...c, apiKey: $any($event.target).value}))" />
               </mat-form-field>
               <button mat-mini-fab color="primary" (click)="addConnection('openai')"
-                [disabled]="!newOpenAiConn().name || !newOpenAiConn().endpoint" matTooltip="Service hinzufügen">
+                [disabled]="!newOpenAiConn().name || !newOpenAiConn().endpoint" matTooltip="Hinzufügen">
                 <mat-icon>add</mat-icon>
               </button>
             </div>
           </mat-card-content>
         </mat-card>
 
-        <!-- OpenAI Prioritätsliste -->
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>Prioritätsliste</mat-card-title>
-            <mat-card-subtitle>Per Drag &amp; Drop sortieren — oben = höchste Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
+            <mat-card-subtitle>Oben = höchste Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="prio-list" cdkDropList (cdkDropListDropped)="dropOpenAi($event)">
@@ -219,9 +176,7 @@
                 <mat-label>Service</mat-label>
                 <mat-select [value]="newOpenAiConfig().connectionId"
                   (selectionChange)="newOpenAiConfig.update(c => ({...c, connectionId: $event.value}))">
-                  @for (c of connections(); track c.id) {
-                    <mat-option [value]="c.id">{{ c.name }}</mat-option>
-                  }
+                  @for (c of connections(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" class="flex-field">
@@ -230,22 +185,44 @@
                   (input)="newOpenAiConfig.update(c => ({...c, deploymentName: $any($event.target).value}))"
                   placeholder="z.B. gpt-4o" />
               </mat-form-field>
-              <button mat-stroked-button color="primary" (click)="addOpenAiConfig()"
-                [disabled]="!newOpenAiConfig().connectionId">
+              <button mat-stroked-button color="primary" (click)="addOpenAiConfig()" [disabled]="!newOpenAiConfig().connectionId">
                 <mat-icon>add</mat-icon> Hinzufügen
               </button>
             </div>
           </mat-card-content>
         </mat-card>
 
-        <!-- ── Azure Document Intelligence ─────────────────────────────── -->
-        <h2 class="provider-section-title">Azure Document Intelligence</h2>
-
-        <!-- DocIntel Services -->
         <mat-card class="settings-card">
           <mat-card-header>
-            <mat-card-title>Services</mat-card-title>
-            <mat-card-subtitle>Benannte Verbindungen mit Endpoint + API Key</mat-card-subtitle>
+            <mat-card-title>KI-Berechtigungen</mat-card-title>
+            <mat-card-subtitle>Steuere welche Entitäten die KI neu in Paperless anlegen darf.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @for (field of toggleFields; track field.key) {
+              <div class="toggle-row">
+                <div class="toggle-label">
+                  <span>{{ field.label }}</span>
+                  @if (field.hint) { <small>{{ field.hint }}</small> }
+                </div>
+                <mat-slide-toggle [checked]="isTrue(field.key)" (change)="setToggle(field.key, $event.checked)">
+                </mat-slide-toggle>
+              </div>
+              <mat-divider></mat-divider>
+            }
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </mat-tab>
+
+    <!-- ── Tab 3: Azure Document Intelligence ───────────────────────────── -->
+    <mat-tab label="Azure Document Intelligence">
+      <div class="tab-content">
+
+        <mat-card class="settings-card">
+          <mat-card-header>
+            <mat-card-title>Verbindungen</mat-card-title>
+            <mat-card-subtitle>Benannte Services mit Endpoint + API Key</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @for (conn of connections(); track conn.id) {
@@ -297,18 +274,17 @@
                   (input)="newDocIntelConn.update(c => ({...c, apiKey: $any($event.target).value}))" />
               </mat-form-field>
               <button mat-mini-fab color="primary" (click)="addConnection('docintel')"
-                [disabled]="!newDocIntelConn().name || !newDocIntelConn().endpoint" matTooltip="Service hinzufügen">
+                [disabled]="!newDocIntelConn().name || !newDocIntelConn().endpoint" matTooltip="Hinzufügen">
                 <mat-icon>add</mat-icon>
               </button>
             </div>
           </mat-card-content>
         </mat-card>
 
-        <!-- DocIntel Prioritätsliste -->
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>Prioritätsliste</mat-card-title>
-            <mat-card-subtitle>Per Drag &amp; Drop sortieren — oben = höchste Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
+            <mat-card-subtitle>Oben = höchste Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="prio-list" cdkDropList (cdkDropListDropped)="dropDocIntel($event)">
@@ -367,31 +343,24 @@
                 <mat-label>Service</mat-label>
                 <mat-select [value]="newDocIntelConfig().connectionId"
                   (selectionChange)="newDocIntelConfig.update(c => ({...c, connectionId: $event.value}))">
-                  @for (c of connections(); track c.id) {
-                    <mat-option [value]="c.id">{{ c.name }}</mat-option>
-                  }
+                  @for (c of connections(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" class="flex-field">
                 <mat-label>Ausgabeformat</mat-label>
                 <mat-select [value]="newDocIntelConfig().outputFormat"
                   (selectionChange)="newDocIntelConfig.update(c => ({...c, outputFormat: $event.value}))">
-                  @for (o of outputFormatOptions; track o.value) {
-                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
-                  }
+                  @for (o of outputFormatOptions; track o.value) { <mat-option [value]="o.value">{{ o.label }}</mat-option> }
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" class="flex-field">
                 <mat-label>Analysemodell</mat-label>
                 <mat-select [value]="newDocIntelConfig().analysisModel"
                   (selectionChange)="newDocIntelConfig.update(c => ({...c, analysisModel: $event.value}))">
-                  @for (m of analysisModelOptions; track m.value) {
-                    <mat-option [value]="m.value">{{ m.label }}</mat-option>
-                  }
+                  @for (m of analysisModelOptions; track m.value) { <mat-option [value]="m.value">{{ m.label }}</mat-option> }
                 </mat-select>
               </mat-form-field>
-              <button mat-stroked-button color="primary" (click)="addDocIntelConfig()"
-                [disabled]="!newDocIntelConfig().connectionId">
+              <button mat-stroked-button color="primary" (click)="addDocIntelConfig()" [disabled]="!newDocIntelConfig().connectionId">
                 <mat-icon>add</mat-icon> Hinzufügen
               </button>
             </div>
@@ -401,16 +370,14 @@
       </div>
     </mat-tab>
 
-    <!-- Tab 3: KI-Prompts -->
+    <!-- ── Tab 4: KI-Prompts ─────────────────────────────────────────────── -->
     <mat-tab label="KI-Prompts">
       <div class="tab-content">
 
         <mat-card class="settings-card">
           <mat-card-header>
             <mat-card-title>System-Prompt</mat-card-title>
-            <mat-card-subtitle>
-              Instruktionen für die KI — definiert die Rolle und das grundlegende Verhalten.
-            </mat-card-subtitle>
+            <mat-card-subtitle>Instruktionen für die KI — definiert die Rolle und das grundlegende Verhalten.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <mat-form-field appearance="outline" class="full-width">
@@ -420,8 +387,7 @@
                 (input)="setValue(systemPromptKey, $any($event.target).value)">
               </textarea>
             </mat-form-field>
-            <button mat-stroked-button (click)="resetPrompt(systemPromptKey)"
-              matTooltip="Standard-Prompt wiederherstellen">
+            <button mat-stroked-button (click)="resetPrompt(systemPromptKey)" matTooltip="Standard-Prompt wiederherstellen">
               <mat-icon>restart_alt</mat-icon>
               Auf Standard zurücksetzen
             </button>
@@ -432,8 +398,7 @@
           <mat-card-header>
             <mat-card-title>User-Prompt-Vorlage</mat-card-title>
             <mat-card-subtitle>
-              Vorlage für den Dokumenten-Prompt. Platzhalter:
-              <code>{{ '{DOCUMENT_CONTENT}' }}</code> und <code>{{ '{METADATA_CONTEXT}' }}</code>
+              Platzhalter: <code>{{ '{DOCUMENT_CONTENT}' }}</code> und <code>{{ '{METADATA_CONTEXT}' }}</code>
             </mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -444,8 +409,7 @@
                 (input)="setValue(userPromptKey, $any($event.target).value)">
               </textarea>
             </mat-form-field>
-            <button mat-stroked-button (click)="resetPrompt(userPromptKey)"
-              matTooltip="Standard-Prompt wiederherstellen">
+            <button mat-stroked-button (click)="resetPrompt(userPromptKey)" matTooltip="Standard-Prompt wiederherstellen">
               <mat-icon>restart_alt</mat-icon>
               Auf Standard zurücksetzen
             </button>

@@ -25,47 +25,15 @@ interface SettingField {
   options?: SettingOption[];
 }
 
-const CONNECTION_FIELDS: SettingField[][] = [
-  [
-    { key: 'Paperless:BaseUrl', label: 'Paperless URL', hint: 'z.B. http://192.168.1.100:8000' },
-    { key: 'Paperless:Token', label: 'Paperless API Token', type: 'password' },
-    { key: 'Paperless:OcrTagName', label: 'Tag-Name für OCR', hint: 'Standard: paperless-ai-ocr' },
-    { key: 'Paperless:AiTagName', label: 'Tag-Name für KI-Verarbeitung', hint: 'Standard: paperless-ai-process' },
-    { key: 'Paperless:ErrorTagName', label: 'Tag-Name für Fehler', hint: 'Standard: paperless-ai-error – wird bei fehlgeschlagenen Jobs gesetzt' },
-    { key: 'Paperless:ReviewTagName', label: 'Tag-Name für Review', hint: 'Standard: paperless-ai-review – wird nach erfolgreichem KI-Job gesetzt' },
-    { key: 'Polling:IntervalSeconds', label: 'Polling-Intervall (Sekunden)', hint: 'Standard: 30' }
-  ],
-  [
-    { key: 'Azure:DocumentIntelligence:Endpoint', label: 'Document Intelligence Endpoint' },
-    { key: 'Azure:DocumentIntelligence:Key', label: 'Document Intelligence Key', type: 'password' },
-    {
-      key: 'Azure:DocumentIntelligence:OutputFormat',
-      label: 'OCR-Ausgabeformat',
-      type: 'select',
-      options: [
-        { value: 'text', label: 'Text – Fließtext, kein Struktur-Markup' },
-        { value: 'markdown', label: 'Markdown – Tabellen, Überschriften, Listen (empfohlen)' }
-      ]
-    },
-    {
-      key: 'Azure:DocumentIntelligence:Model',
-      label: 'Analyse-Modell',
-      type: 'select',
-      options: [
-        { value: 'auto', label: 'Automatisch (read für Text, layout für Markdown)' },
-        { value: 'prebuilt-read', label: 'prebuilt-read – schnell, nur Fließtext' },
-        { value: 'prebuilt-layout', label: 'prebuilt-layout – Tabellen, Struktur, langsamer' }
-      ]
-    }
-  ],
-  [
-    { key: 'Azure:OpenAI:Endpoint', label: 'Azure OpenAI Endpoint' },
-    { key: 'Azure:OpenAI:Key', label: 'Azure OpenAI Key', type: 'password' },
-    { key: 'Azure:OpenAI:DeploymentName', label: 'Deployment Name', hint: 'z.B. gpt-4o' }
-  ]
+const PAPERLESS_FIELDS: SettingField[] = [
+  { key: 'Paperless:BaseUrl', label: 'Paperless URL', hint: 'z.B. http://192.168.1.100:8000' },
+  { key: 'Paperless:Token', label: 'Paperless API Token', type: 'password' },
+  { key: 'Paperless:OcrTagName', label: 'Tag-Name für OCR', hint: 'Standard: paperless-ai-ocr' },
+  { key: 'Paperless:AiTagName', label: 'Tag-Name für KI-Verarbeitung', hint: 'Standard: paperless-ai-process' },
+  { key: 'Paperless:ErrorTagName', label: 'Tag-Name für Fehler', hint: 'Standard: paperless-ai-error' },
+  { key: 'Paperless:ReviewTagName', label: 'Tag-Name für Review', hint: 'Standard: paperless-ai-review' },
+  { key: 'Polling:IntervalSeconds', label: 'Polling-Intervall (Sekunden)', hint: 'Standard: 30' }
 ];
-
-const SECTION_TITLES = ['Paperless-NGX', 'Azure Document Intelligence (OCR)', 'Azure OpenAI'];
 
 const PROCESSING_TOGGLE_FIELDS: SettingField[] = [
   {
@@ -133,7 +101,7 @@ export class SettingsComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly snack = inject(MatSnackBar);
 
-  sections = CONNECTION_FIELDS.map((fields, i) => ({ title: SECTION_TITLES[i], fields }));
+  paperlessFields = PAPERLESS_FIELDS;
   processingToggleFields = PROCESSING_TOGGLE_FIELDS;
   toggleFields = TOGGLE_FIELDS;
   values = signal<Record<string, string>>({});
