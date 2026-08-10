@@ -19,14 +19,47 @@ public class DocumentProcessingWorker(
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    public const string MaxParallelOcrKey = "Processing:MaxParallelOcr";
+    public const string MaxParallelAiKey = "Processing:MaxParallelAi";
+    public const string MaxParallelTotalKey = "Processing:MaxParallelTotal";
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await RecoverPendingJobsAsync(stoppingToken);
 
+        var maxOcr   = int.TryParse(settings.Get(MaxParallelOcrKey),   out var o) ? Math.Max(1, o) : 1;
+        var maxAi    = int.TryParse(settings.Get(MaxParallelAiKey),    out var a) ? Math.Max(1, a) : 1;
+        var maxTotal = int.TryParse(settings.Get(MaxParallelTotalKey), out var t) ? Math.Max(1, t) : 2;
+
+        using var ocrSemaphore   = new SemaphoreSlim(maxOcr,   maxOcr);
+        using var aiSemaphore    = new SemaphoreSlim(maxAi,    maxAi);
+        using var totalSemaphore = new SemaphoreSlim(maxTotal, maxTotal);
+
+        logger.LogInformation(
+            "Parallelverarbeitung gestartet — OCR: {Ocr}, AI: {Ai}, Gesamt: {Total}",
+            maxOcr, maxAi, maxTotal);
+
+        var activeTasks = new List<Task>();
+
         await foreach (var job in channel.Reader.ReadAllAsync(stoppingToken))
         {
-            await ProcessJobAsync(job, stoppingToken);
+            activeTasks.RemoveAll(t => t.IsCompleted);
+
+            var typeSem = job.JobType == JobType.Ai ? aiSemaphore : ocrSemaphore;
+            await totalSemaphore.WaitAsync(stoppingToken);
+            await typeSem.WaitAsync(stoppingToken);
+
+            var capturedJob = job;
+            var capturedTypeSem = typeSem;
+            activeTasks.Add(Task.Run(async () =>
+            {
+                try { await ProcessJobAsync(capturedJob, stoppingToken); }
+                finally { capturedTypeSem.Release(); totalSemaphore.Release(); }
+            }, stoppingToken));
         }
+
+        if (activeTasks.Count > 0)
+            await Task.WhenAll(activeTasks);
     }
 
     private async Task RecoverPendingJobsAsync(CancellationToken ct)

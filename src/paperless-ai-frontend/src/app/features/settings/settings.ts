@@ -25,6 +25,12 @@ interface SettingField {
   options?: SettingOption[];
 }
 
+const PARALLEL_FIELDS: SettingField[] = [
+  { key: 'Processing:MaxParallelOcr',   label: 'Parallele OCR-Jobs',      hint: 'Standard: 1' },
+  { key: 'Processing:MaxParallelAi',    label: 'Parallele KI-Jobs',        hint: 'Standard: 1' },
+  { key: 'Processing:MaxParallelTotal', label: 'Parallele Jobs gesamt',    hint: 'Standard: 2 – sollte ≥ OCR + KI sein' }
+];
+
 const PAPERLESS_FIELDS: SettingField[] = [
   { key: 'Paperless:BaseUrl', label: 'Paperless URL', hint: 'z.B. http://192.168.1.100:8000' },
   { key: 'Paperless:Token', label: 'Paperless API Token', type: 'password' },
@@ -102,6 +108,7 @@ export class SettingsComponent implements OnInit {
   private readonly snack = inject(MatSnackBar);
 
   paperlessFields = PAPERLESS_FIELDS;
+  parallelFields = PARALLEL_FIELDS;
   processingToggleFields = PROCESSING_TOGGLE_FIELDS;
   toggleFields = TOGGLE_FIELDS;
   values = signal<Record<string, string>>({});

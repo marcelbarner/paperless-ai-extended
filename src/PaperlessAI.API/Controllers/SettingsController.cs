@@ -30,6 +30,9 @@ public class SettingsController(AppDbContext db) : ControllerBase
         PaperlessPollingService.PollingEnabledKey,
         PaperlessPollingService.OcrEnabledKey,
         PaperlessPollingService.AiEnabledKey,
+        DocumentProcessingWorker.MaxParallelOcrKey,
+        DocumentProcessingWorker.MaxParallelAiKey,
+        DocumentProcessingWorker.MaxParallelTotalKey,
         OpenAIService.SystemPromptKey,
         OpenAIService.UserPromptTemplateKey,
         OpenAIService.CanCreateCorrespondentKey,
@@ -70,6 +73,12 @@ public class SettingsController(AppDbContext db) : ControllerBase
             result[PaperlessPollingService.OcrEnabledKey] = "true";
         if (string.IsNullOrEmpty(result[PaperlessPollingService.AiEnabledKey]))
             result[PaperlessPollingService.AiEnabledKey] = "true";
+        if (string.IsNullOrEmpty(result[DocumentProcessingWorker.MaxParallelOcrKey]))
+            result[DocumentProcessingWorker.MaxParallelOcrKey] = "1";
+        if (string.IsNullOrEmpty(result[DocumentProcessingWorker.MaxParallelAiKey]))
+            result[DocumentProcessingWorker.MaxParallelAiKey] = "1";
+        if (string.IsNullOrEmpty(result[DocumentProcessingWorker.MaxParallelTotalKey]))
+            result[DocumentProcessingWorker.MaxParallelTotalKey] = "2";
 
         // CanCreate defaults to "false"
         foreach (var key in new[]
