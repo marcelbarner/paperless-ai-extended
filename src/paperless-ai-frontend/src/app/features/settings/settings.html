@@ -170,24 +170,24 @@
             <mat-card-subtitle>Per Drag &amp; Drop sortieren — von links (höchste) nach rechts (niedrigste) Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <div class="prio-list" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="dropOpenAi($event)">
+            <div class="prio-list" cdkDropList (cdkDropListDropped)="dropOpenAi($event)">
+              <div class="prio-header-row">
+                <span class="col-drag"></span>
+                <span class="col-service">Service</span>
+                <span class="col-deployment">Deployment Name</span>
+                <span class="col-actions"></span>
+              </div>
               @for (cfg of openAiConfigs(); track cfg.id) {
-                <mat-card class="prio-card" cdkDrag [class.disabled-card]="!cfg.isEnabled">
-                  <div class="prio-card-drag-handle" cdkDragHandle>
-                    <mat-icon class="drag-icon">drag_indicator</mat-icon>
-                    <span class="prio-badge">{{ cfg.priority }}</span>
-                  </div>
-                  <div class="prio-card-content">
-                    <div class="prio-card-title">{{ cfg.connectionName }}</div>
-                    <div class="prio-card-sub">{{ cfg.connectionEndpoint }}</div>
-                    <div class="prio-card-param">Deployment: {{ cfg.deploymentName || '(Standard)' }}</div>
-                  </div>
-                  <div class="prio-card-actions">
+                <div class="prio-row" cdkDrag [class.disabled-row]="!cfg.isEnabled">
+                  <div cdkDragHandle class="col-drag"><mat-icon class="drag-icon">drag_indicator</mat-icon></div>
+                  <span class="col-service">{{ cfg.connectionName }}</span>
+                  <span class="col-deployment">{{ cfg.deploymentName || '(Standard)' }}</span>
+                  <div class="col-actions">
                     <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
-                    <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)"><mat-icon>delete</mat-icon></button>
+                    <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen"><mat-icon>delete</mat-icon></button>
                   </div>
-                  <div *cdkDragPlaceholder class="prio-card-placeholder"></div>
-                </mat-card>
+                  <div *cdkDragPlaceholder class="prio-row-placeholder"></div>
+                </div>
               }
               @if (openAiConfigs().length === 0) {
                 <div class="prio-empty">Noch keine Einträge – Service auswählen und hinzufügen</div>
@@ -290,25 +290,26 @@
             <mat-card-subtitle>Per Drag &amp; Drop sortieren — von links (höchste) nach rechts (niedrigste) Priorität. Fallback bei HTTP 401, 429, 503.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <div class="prio-list" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="dropDocIntel($event)">
+            <div class="prio-list" cdkDropList (cdkDropListDropped)="dropDocIntel($event)">
+              <div class="prio-header-row">
+                <span class="col-drag"></span>
+                <span class="col-service">Service</span>
+                <span class="col-format">Ausgabeformat</span>
+                <span class="col-model">Analysemodell</span>
+                <span class="col-actions"></span>
+              </div>
               @for (cfg of docIntelConfigs(); track cfg.id) {
-                <mat-card class="prio-card" cdkDrag [class.disabled-card]="!cfg.isEnabled">
-                  <div class="prio-card-drag-handle" cdkDragHandle>
-                    <mat-icon class="drag-icon">drag_indicator</mat-icon>
-                    <span class="prio-badge">{{ cfg.priority }}</span>
-                  </div>
-                  <div class="prio-card-content">
-                    <div class="prio-card-title">{{ cfg.connectionName }}</div>
-                    <div class="prio-card-sub">{{ cfg.connectionEndpoint }}</div>
-                    <div class="prio-card-param">Format: {{ cfg.outputFormat || 'text' }}</div>
-                    <div class="prio-card-param">Modell: {{ cfg.analysisModel || 'auto' }}</div>
-                  </div>
-                  <div class="prio-card-actions">
+                <div class="prio-row" cdkDrag [class.disabled-row]="!cfg.isEnabled">
+                  <div cdkDragHandle class="col-drag"><mat-icon class="drag-icon">drag_indicator</mat-icon></div>
+                  <span class="col-service">{{ cfg.connectionName }}</span>
+                  <span class="col-format">{{ cfg.outputFormat || 'text' }}</span>
+                  <span class="col-model">{{ cfg.analysisModel || 'auto' }}</span>
+                  <div class="col-actions">
                     <mat-slide-toggle [checked]="cfg.isEnabled" (change)="toggleConfig(cfg)" color="primary"></mat-slide-toggle>
-                    <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)"><mat-icon>delete</mat-icon></button>
+                    <button mat-icon-button color="warn" (click)="deleteConfig(cfg.id)" matTooltip="Entfernen"><mat-icon>delete</mat-icon></button>
                   </div>
-                  <div *cdkDragPlaceholder class="prio-card-placeholder"></div>
-                </mat-card>
+                  <div *cdkDragPlaceholder class="prio-row-placeholder"></div>
+                </div>
               }
               @if (docIntelConfigs().length === 0) {
                 <div class="prio-empty">Noch keine Einträge – Service auswählen und hinzufügen</div>
