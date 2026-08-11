@@ -19,13 +19,6 @@ public class SettingsController(AppDbContext db) : ControllerBase
         PaperlessPollingService.AiTagKey,
         PaperlessPollingService.ErrorTagKey,
         PaperlessPollingService.ReviewTagKey,
-        "Azure:DocumentIntelligence:Endpoint",
-        DocumentIntelligenceService.OutputFormatKey,
-        DocumentIntelligenceService.ModelKey,
-        "Azure:DocumentIntelligence:Key",
-        "Azure:OpenAI:Endpoint",
-        "Azure:OpenAI:Key",
-        "Azure:OpenAI:DeploymentName",
         "Polling:IntervalSeconds",
         PaperlessPollingService.PollingEnabledKey,
         PaperlessPollingService.OcrEnabledKey,
@@ -62,11 +55,6 @@ public class SettingsController(AppDbContext db) : ControllerBase
             result[PaperlessPollingService.ErrorTagKey] = PaperlessPollingService.DefaultErrorTagName;
         if (string.IsNullOrEmpty(result[PaperlessPollingService.ReviewTagKey]))
             result[PaperlessPollingService.ReviewTagKey] = PaperlessPollingService.DefaultReviewTagName;
-        if (string.IsNullOrEmpty(result[DocumentIntelligenceService.OutputFormatKey]))
-            result[DocumentIntelligenceService.OutputFormatKey] = "text";
-        if (string.IsNullOrEmpty(result[DocumentIntelligenceService.ModelKey]))
-            result[DocumentIntelligenceService.ModelKey] = "auto";
-
         if (string.IsNullOrEmpty(result[PaperlessPollingService.PollingEnabledKey]))
             result[PaperlessPollingService.PollingEnabledKey] = "true";
         if (string.IsNullOrEmpty(result[PaperlessPollingService.OcrEnabledKey]))

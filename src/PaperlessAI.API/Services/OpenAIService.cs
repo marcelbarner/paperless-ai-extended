@@ -128,14 +128,9 @@ public class OpenAIService(AppSettingsService settings, AppDbContext db, ILogger
             .ToListAsync(ct);
 
         if (providers.Count == 0)
-        {
-            var endpoint = settings.Get("Azure:OpenAI:Endpoint")
-                ?? throw new InvalidOperationException("Azure:OpenAI:Endpoint not configured.");
-            var key = settings.Get("Azure:OpenAI:Key")
-                ?? throw new InvalidOperationException("Azure:OpenAI:Key not configured.");
-            var client = BuildClient(endpoint, key, defaultDeployment);
-            return await RunAsync(client, documentContent, metadataContext, systemPrompt, userTemplate, searchDocuments, ct);
-        }
+            throw new InvalidOperationException(
+                "Keine aktiven Azure OpenAI Provider konfiguriert. " +
+                "Bitte unter Einstellungen → Azure OpenAI einen Service und einen Prioritätslisten-Eintrag anlegen.");
 
         Exception? lastException = null;
         foreach (var provider in providers)

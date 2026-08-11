@@ -28,13 +28,9 @@ public class DocumentIntelligenceService(
             .ToListAsync(ct);
 
         if (providers.Count == 0)
-        {
-            var endpoint = settings.Get("Azure:DocumentIntelligence:Endpoint")
-                ?? throw new InvalidOperationException("Azure:DocumentIntelligence:Endpoint not configured.");
-            var key = settings.Get("Azure:DocumentIntelligence:Key")
-                ?? throw new InvalidOperationException("Azure:DocumentIntelligence:Key not configured.");
-            return await AnalyzeWithClientAsync(endpoint, key, globalFormat, globalModelSetting, pdfBytes, ct);
-        }
+            throw new InvalidOperationException(
+                "Keine aktiven Azure Document Intelligence Provider konfiguriert. " +
+                "Bitte unter Einstellungen → Azure Document Intelligence einen Service und einen Prioritätslisten-Eintrag anlegen.");
 
         Exception? lastException = null;
         foreach (var provider in providers)
