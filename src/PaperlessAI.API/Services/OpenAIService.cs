@@ -109,6 +109,61 @@ public class OpenAIService(AppSettingsService settings, AppDbContext db, ILogger
     public bool CanCreate(string key) =>
         settings.Get(key)?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
+    public async Task<string> GenerateDescriptionAsync(
+        string entityType, string name, string? existingDescription, CancellationToken ct)
+    {
+        var defaultDeployment = settings.Get("Azure:OpenAI:DeploymentName") ?? "gpt-4o";
+
+        var providers = await db.AiProviderConfigs
+            .Include(p => p.Connection)
+            .Where(p => p.ServiceType == AiServiceType.OpenAI && p.IsEnabled)
+            .OrderBy(p => p.Priority)
+            .ToListAsync(ct);
+
+        if (providers.Count == 0)
+            throw new InvalidOperationException("Keine aktiven Azure OpenAI Provider konfiguriert.");
+
+        var hasExisting = !string.IsNullOrWhiteSpace(existingDescription);
+        var action = hasExisting ? "Optimiere und erweitere die bestehende Beschreibung" : "Generiere eine neue Beschreibung";
+
+        var prompt = $"""
+            Du bist ein Beschreibungsassistent für das Dokumentenverwaltungssystem Paperless-NGX.
+            {action} für folgende Metadaten-Entität:
+
+            Typ: {entityType}
+            Name: {name}
+            {(hasExisting ? $"Bestehende Beschreibung: {existingDescription}" : "Noch keine Beschreibung vorhanden.")}
+
+            Regeln je nach Typ:
+            - Korrespondent: alle Namensformen/Aliases, Branche, Domain(s). Format: "Primärname, Alias1, domain.de – Charakterisierung"
+            - Tag: welche Dokumente erhalten diesen Tag, wann wird er verwendet
+            - Dokumenttyp: welche Dokumente fallen darunter, typische Merkmale
+            - Speicherpfad: welche Dokumente werden hier abgelegt
+            - Custom Field: was beschreibt dieses Feld, welche Werte sind typisch
+
+            Antworte NUR mit der fertigen Beschreibung auf Deutsch, ohne Einleitung oder Erklärung.
+            """;
+
+        Exception? lastEx = null;
+        foreach (var provider in providers)
+        {
+            try
+            {
+                var deployment = provider.DeploymentName ?? defaultDeployment;
+                var client = BuildClient(provider.Connection.Endpoint, provider.Connection.ApiKey, deployment);
+                var response = await client.CompleteChatAsync(
+                    [new UserChatMessage(prompt)], cancellationToken: ct);
+                return response.Value.Content[0].Text.Trim();
+            }
+            catch (Azure.RequestFailedException ex) when (FallbackStatusCodes.Contains(ex.Status))
+            {
+                logger.LogWarning("GenerateDescription: Provider '{Name}' fehlgeschlagen ({Status}) – nächster", provider.Connection.Name, ex.Status);
+                lastEx = ex;
+            }
+        }
+        throw lastEx ?? new InvalidOperationException("Alle OpenAI Provider fehlgeschlagen");
+    }
+
     private static readonly int[] FallbackStatusCodes = [401, 429, 503];
 
     private static ChatClient BuildClient(string endpoint, string key, string deployment) =>

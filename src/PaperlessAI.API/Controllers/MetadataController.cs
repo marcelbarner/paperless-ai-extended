@@ -9,7 +9,7 @@ namespace PaperlessAI.API.Controllers;
 
 [ApiController]
 [Route("api/metadata/{type}")]
-public class MetadataController(AppDbContext db, PaperlessClient paperless, ILogger<MetadataController> logger) : ControllerBase
+public class MetadataController(AppDbContext db, PaperlessClient paperless, OpenAIService openAi, ILogger<MetadataController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(string type, CancellationToken ct)
@@ -98,6 +98,55 @@ public class MetadataController(AppDbContext db, PaperlessClient paperless, ILog
         await db.SaveChangesAsync(ct);
         return Ok(new { synced = items.Count, removed = orphans.Count });
     }
+
+    [HttpPost("{id:int}/generate-description")]
+    public async Task<IActionResult> GenerateDescription(string type, int id, CancellationToken ct)
+    {
+        var entityType = ParseEntityType(type);
+        if (entityType is null) return BadRequest("Unknown type");
+
+        var item = await db.MetadataDescriptions
+            .FirstOrDefaultAsync(d => d.EntityType == entityType.Value && d.EntityId == id, ct);
+        if (item is null) return NotFound();
+
+        var label = GetEntityTypeLabel(entityType.Value);
+        item.Description = await openAi.GenerateDescriptionAsync(label, item.Name, item.Description, ct);
+        item.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Ok(item);
+    }
+
+    [HttpPost("generate-descriptions")]
+    public async Task<IActionResult> GenerateDescriptions(string type, CancellationToken ct)
+    {
+        var entityType = ParseEntityType(type);
+        if (entityType is null) return BadRequest("Unknown type");
+
+        var items = await db.MetadataDescriptions
+            .Where(d => d.EntityType == entityType.Value)
+            .ToListAsync(ct);
+
+        var label = GetEntityTypeLabel(entityType.Value);
+        foreach (var item in items)
+        {
+            item.Description = await openAi.GenerateDescriptionAsync(label, item.Name, item.Description, ct);
+            item.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("KI-Beschreibungen generiert/optimiert: {Count} {Type}-Einträge", items.Count, type);
+        return Ok(new { processed = items.Count });
+    }
+
+    private static string GetEntityTypeLabel(EntityType type) => type switch
+    {
+        EntityType.Correspondent => "Korrespondent",
+        EntityType.DocumentType  => "Dokumenttyp",
+        EntityType.Tag           => "Tag",
+        EntityType.StoragePath   => "Speicherpfad",
+        EntityType.CustomField   => "Custom Field",
+        _                        => type.ToString()
+    };
 
     private async Task<List<(int Id, string Name)>> FetchFromPaperlessAsync(EntityType type, CancellationToken ct)
         => type switch

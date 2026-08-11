@@ -49,6 +49,8 @@ export class MetadataListComponent implements OnInit {
   editDescription = signal('');
   loading = signal(true);
   syncing = signal(false);
+  generatingId = signal<number | null>(null);
+  generatingAll = signal(false);
   displayedColumns = ['name', 'description', 'actions'];
 
   ngOnInit() {
@@ -93,5 +95,35 @@ export class MetadataListComponent implements OnInit {
 
   cancelEdit() {
     this.editingId.set(null);
+  }
+
+  generateDescription(item: MetadataItem) {
+    this.generatingId.set(item.entityId);
+    this.api.generateDescription(this.type(), item.entityId).subscribe({
+      next: (updated) => {
+        this.items.update(list => list.map(i => i.entityId === updated.entityId ? updated : i));
+        this.generatingId.set(null);
+        this.snack.open('Beschreibung generiert', 'OK', { duration: 2000 });
+      },
+      error: () => {
+        this.generatingId.set(null);
+        this.snack.open('Fehler beim Generieren', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  generateAll() {
+    this.generatingAll.set(true);
+    this.api.generateAllDescriptions(this.type()).subscribe({
+      next: (res) => {
+        this.generatingAll.set(false);
+        this.snack.open(`${res.processed} Beschreibungen generiert/optimiert`, 'OK', { duration: 4000 });
+        this.load();
+      },
+      error: () => {
+        this.generatingAll.set(false);
+        this.snack.open('Fehler beim Batch-Generieren', 'OK', { duration: 3000 });
+      }
+    });
   }
 }

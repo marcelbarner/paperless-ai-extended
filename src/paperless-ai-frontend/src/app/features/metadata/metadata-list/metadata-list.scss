@@ -1,5 +1,6 @@
 .page-container { padding: 24px; }
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
 .page-title { font-size: 24px; font-weight: 500; margin: 0; }
 .page-subtitle { color: rgba(0,0,0,.54); margin-bottom: 24px; font-size: 14px; }
 
@@ -19,3 +20,6 @@
 }
 
 mat-spinner { display: inline-block; margin-right: 8px; }
+.actions-cell { white-space: nowrap; }
+.generate-hint { margin-left: 8px; }
+.inline-icon { font-size: 14px; vertical-align: middle; }

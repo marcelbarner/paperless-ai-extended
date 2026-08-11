@@ -142,6 +142,14 @@ export class ApiService {
     return this.http.post<{ synced: number; removed: number }>(`${this.base}/metadata/${type}/sync`, null);
   }
 
+  generateDescription(type: MetadataType, id: number): Observable<MetadataItem> {
+    return this.http.post<MetadataItem>(`${this.base}/metadata/${type}/${id}/generate-description`, null);
+  }
+
+  generateAllDescriptions(type: MetadataType): Observable<{ processed: number }> {
+    return this.http.post<{ processed: number }>(`${this.base}/metadata/${type}/generate-descriptions`, null);
+  }
+
   getSettings(): Observable<Record<string, string>> {
     return this.http.get<Record<string, string>>(`${this.base}/settings`);
   }

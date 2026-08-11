@@ -1,14 +1,24 @@
 <div class="page-container">
   <div class="page-header">
     <h1 class="page-title">{{ label() }}</h1>
-    <button mat-raised-button color="primary" (click)="sync()" [disabled]="syncing()">
-      @if (syncing()) { <mat-spinner diameter="18"></mat-spinner> }
-      @else { <mat-icon>sync</mat-icon> }
-      Von Paperless synchronisieren
-    </button>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="generateAll()"
+        [disabled]="generatingAll() || syncing() || loading() || items().length === 0"
+        matTooltip="KI generiert/optimiert Beschreibungen für alle Einträge">
+        @if (generatingAll()) { <mat-spinner diameter="18"></mat-spinner> }
+        @else { <mat-icon>auto_awesome</mat-icon> }
+        Alle KI-Beschreibungen optimieren
+      </button>
+      <button mat-raised-button color="primary" (click)="sync()" [disabled]="syncing()">
+        @if (syncing()) { <mat-spinner diameter="18"></mat-spinner> }
+        @else { <mat-icon>sync</mat-icon> }
+        Von Paperless synchronisieren
+      </button>
+    </div>
   </div>
   <p class="page-subtitle">
     Beschreibungen helfen der KI, die richtige Auswahl zu treffen.
+    <span class="generate-hint">Nutze <mat-icon class="inline-icon">auto_awesome</mat-icon> um Beschreibungen per KI zu generieren oder zu optimieren.</span>
   </p>
 
   @if (loading()) {
@@ -48,7 +58,7 @@
 
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let item">
+            <td mat-cell *matCellDef="let item" class="actions-cell">
               @if (editingId() === item.entityId) {
                 <button mat-icon-button color="primary" (click)="saveEdit(item)" matTooltip="Speichern">
                   <mat-icon>check</mat-icon>
@@ -57,7 +67,18 @@
                   <mat-icon>close</mat-icon>
                 </button>
               } @else {
-                <button mat-icon-button (click)="startEdit(item)" matTooltip="Bearbeiten">
+                @if (generatingId() === item.entityId) {
+                  <mat-spinner diameter="24" style="display:inline-block; margin: 0 8px;"></mat-spinner>
+                } @else {
+                  <button mat-icon-button color="accent"
+                    (click)="generateDescription(item)"
+                    [disabled]="generatingAll() || generatingId() !== null"
+                    [matTooltip]="item.description ? 'KI-Beschreibung optimieren' : 'KI-Beschreibung generieren'">
+                    <mat-icon>auto_awesome</mat-icon>
+                  </button>
+                }
+                <button mat-icon-button (click)="startEdit(item)" matTooltip="Manuell bearbeiten"
+                  [disabled]="generatingId() !== null">
                   <mat-icon>edit</mat-icon>
                 </button>
               }
