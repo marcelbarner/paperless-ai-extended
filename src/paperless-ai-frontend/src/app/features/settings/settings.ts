@@ -212,14 +212,17 @@ export class SettingsComponent implements OnInit {
     const id = this.editingConnId();
     if (id === null) return;
     const c = this.editConn();
-    this.api.updateConnection(id, c.name, c.endpoint, c.apiKey || undefined).subscribe(() => {
-      this.editingConnId.set(null);
-      this.loadProviders();
+    this.api.updateConnection(id, c.name, c.endpoint, c.apiKey || undefined).subscribe({
+      next: () => { this.editingConnId.set(null); this.loadProviders(); },
+      error: (e) => this.snack.open(`Fehler beim Speichern: ${e.status}`, 'OK', { duration: 4000 })
     });
   }
 
   deleteConnection(id: number) {
-    this.api.deleteConnection(id).subscribe(() => this.loadProviders());
+    this.api.deleteConnection(id).subscribe({
+      next: () => this.loadProviders(),
+      error: (e) => this.snack.open(`Fehler beim Löschen: ${e.status}`, 'OK', { duration: 4000 })
+    });
   }
 
   // ── Priority Config Management ───────────────────────────────────────────
@@ -232,9 +235,9 @@ export class SettingsComponent implements OnInit {
       connectionId: c.connectionId,
       deploymentName: c.deploymentName || null,
       isEnabled: true
-    }).subscribe(() => {
-      this.newOpenAiConfig.set({ connectionId: 0, deploymentName: '' });
-      this.loadProviders();
+    }).subscribe({
+      next: () => { this.newOpenAiConfig.set({ connectionId: 0, deploymentName: '' }); this.loadProviders(); },
+      error: (e) => this.snack.open(`Fehler: ${e.status}`, 'OK', { duration: 4000 })
     });
   }
 
@@ -247,9 +250,9 @@ export class SettingsComponent implements OnInit {
       outputFormat: c.outputFormat,
       analysisModel: c.analysisModel,
       isEnabled: true
-    }).subscribe(() => {
-      this.newDocIntelConfig.set({ connectionId: 0, outputFormat: 'text', analysisModel: 'auto' });
-      this.loadProviders();
+    }).subscribe({
+      next: () => { this.newDocIntelConfig.set({ connectionId: 0, outputFormat: 'text', analysisModel: 'auto' }); this.loadProviders(); },
+      error: (e) => this.snack.open(`Fehler: ${e.status}`, 'OK', { duration: 4000 })
     });
   }
 
@@ -274,10 +277,9 @@ export class SettingsComponent implements OnInit {
       outputFormat: ec.outputFormat,
       analysisModel: ec.analysisModel,
       isEnabled: ec.isEnabled
-    }).subscribe(() => {
-      this.editingConfigId.set(null);
-      this.editingConfig.set(null);
-      this.loadProviders();
+    }).subscribe({
+      next: () => { this.editingConfigId.set(null); this.editingConfig.set(null); this.loadProviders(); },
+      error: (e) => this.snack.open(`Fehler beim Speichern: ${e.status}`, 'OK', { duration: 4000 })
     });
   }
 

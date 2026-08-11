@@ -174,6 +174,6 @@ public class ProvidersController(AppDbContext db) : ControllerBase
     }
 }
 
-public record ConnectionRequest(string ServiceType, string Name, string Endpoint, string? ApiKey);
-public record ProviderConfigRequest(string ServiceType, int ConnectionId, string? DeploymentName, string? OutputFormat, string? AnalysisModel, bool IsEnabled);
+public record ConnectionRequest(string? ServiceType, string Name, string Endpoint, string? ApiKey);
+public record ProviderConfigRequest(string? ServiceType, int ConnectionId, string? DeploymentName, string? OutputFormat, string? AnalysisModel, bool IsEnabled);
 public record ReorderRequest(string ServiceType, List<int> Ids);
