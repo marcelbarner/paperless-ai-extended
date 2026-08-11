@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiService, MetadataItem, MetadataType } from '../../../core/services/api';
 
 const META_LABELS: Record<string, string> = {
@@ -32,7 +33,8 @@ const META_LABELS: Record<string, string> = {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ],
   templateUrl: './metadata-list.html',
   styleUrl: './metadata-list.scss'
